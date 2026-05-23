@@ -1304,19 +1304,40 @@ document.querySelectorAll(".filter-btn").forEach(btn => {
   });
 });
 
-// ── Init: fetch live data ─────────────────────────────────────
+// ── Init: cache-first, then refresh from API ──────────────────
+const CACHE_KEY = "bgn_cache";
+
 async function init() {
+  const statusEl = document.getElementById("data-status");
+
+  // 1. Show cached data instantly if available
+  const cached = localStorage.getItem(CACHE_KEY);
+  if (cached) {
+    try {
+      const data = JSON.parse(cached);
+      const playLog = [...data.sessions].sort((a, b) => b.date.localeCompare(a.date));
+      statusEl.textContent = "updating…";
+      renderDashboard(data.games, playLog);
+    } catch (_) { /* ignore corrupt cache */ }
+  }
+
+  // 2. Fetch fresh data in the background
   try {
     const res  = await fetch(API_URL);
     const data = await res.json();
     const playLog = [...data.sessions].sort((a, b) => b.date.localeCompare(a.date));
-    document.getElementById("data-status").textContent = "live data";
+    localStorage.setItem(CACHE_KEY, JSON.stringify(data));
+    statusEl.textContent = "live data";
     renderDashboard(data.games, playLog);
   } catch (err) {
     console.error("Failed to load data:", err);
-    document.getElementById("data-status").textContent = "⚠ connection error";
-    document.getElementById("session-list").innerHTML =
-      `<div style="color:var(--text-muted);font-size:0.85rem;text-align:center;padding:32px 0;font-family:'Courier New',monospace;letter-spacing:0.08em">Could not connect to Google Sheets. Please refresh.</div>`;
+    if (cached) {
+      statusEl.textContent = "⚠ cached data";
+    } else {
+      statusEl.textContent = "⚠ connection error";
+      document.getElementById("session-list").innerHTML =
+        `<div style="color:var(--text-muted);font-size:0.85rem;text-align:center;padding:32px 0;font-family:'Courier New',monospace;letter-spacing:0.08em">Could not connect to Google Sheets. Please refresh.</div>`;
+    }
   }
 }
 
