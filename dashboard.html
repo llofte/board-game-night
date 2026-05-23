@@ -1,0 +1,1327 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Board Game Night</title>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg: #0e1014;
+      --surface: #161920;
+      --surface2: #1e2230;
+      --border: #2a3040;
+      --border-hi: #3a4558;
+      --accent: #c07a38;
+      --accent-dim: #8a5520;
+      --accent-bright: #e09040;
+      --text: #c8ccd8;
+      --text-muted: #5a6278;
+      --green: #4a8f60;
+      --red: #a04840;
+      --copper-hi: #d4944a;
+    }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: 'Georgia', serif;
+      min-height: 100vh;
+    }
+
+    /* ── Header ── */
+    header {
+      background: var(--surface);
+      border-bottom: 3px solid var(--accent);
+      box-shadow: 0 1px 0 var(--accent-dim), 0 4px 24px rgba(0,0,0,0.6);
+      padding: 18px 32px;
+      display: flex;
+      align-items: baseline;
+      gap: 16px;
+    }
+    header h1 {
+      font-size: 1.7rem;
+      color: var(--accent-bright);
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+      text-shadow: 0 0 20px rgba(192,122,56,0.4);
+    }
+    header span {
+      font-size: 0.85rem;
+      color: var(--text-muted);
+      font-family: 'Courier New', monospace;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+    }
+
+    /* ── Layout ── */
+    main {
+      max-width: 1100px;
+      margin: 0 auto;
+      padding: 28px 24px;
+      display: grid;
+      gap: 24px;
+    }
+
+    /* ── Stat cards ── */
+    .stat-grid {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 16px;
+    }
+    .stat-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-top: 2px solid var(--accent-dim);
+      border-radius: 4px;
+      padding: 20px;
+      box-shadow: inset 0 1px 0 rgba(255,255,255,0.03), 0 4px 16px rgba(0,0,0,0.4);
+      position: relative;
+    }
+    .stat-card::before {
+      content: '';
+      position: absolute;
+      top: 0; left: 0; right: 0;
+      height: 1px;
+      background: linear-gradient(90deg, transparent, var(--copper-hi), transparent);
+      opacity: 0.3;
+    }
+    .stat-card .label {
+      font-size: 0.7rem;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      letter-spacing: 0.12em;
+      font-family: 'Courier New', monospace;
+      margin-bottom: 10px;
+    }
+    .stat-card .value {
+      font-size: 2rem;
+      color: var(--accent-bright);
+      line-height: 1;
+      text-shadow: 0 0 12px rgba(192,122,56,0.3);
+    }
+    .stat-card .sub {
+      font-size: 0.75rem;
+      color: var(--text-muted);
+      margin-top: 6px;
+      font-family: 'Courier New', monospace;
+      letter-spacing: 0.05em;
+    }
+
+    /* ── Section titles ── */
+    .section-title {
+      font-size: 0.7rem;
+      text-transform: uppercase;
+      letter-spacing: 0.16em;
+      color: var(--accent);
+      font-family: 'Courier New', monospace;
+      margin-bottom: 16px;
+      padding-bottom: 8px;
+      border-bottom: 1px solid var(--border);
+    }
+
+    /* ── Two-col layout ── */
+    .two-col {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 24px;
+    }
+
+    /* ── Panel ── */
+    .panel {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-top: 1px solid var(--border-hi);
+      border-radius: 4px;
+      padding: 20px;
+      box-shadow: 0 4px 24px rgba(0,0,0,0.4);
+    }
+
+    /* ── Leaderboard ── */
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 0.9rem;
+    }
+    thead th {
+      text-align: left;
+      font-size: 0.68rem;
+      text-transform: uppercase;
+      letter-spacing: 0.12em;
+      color: var(--accent);
+      font-family: 'Courier New', monospace;
+      padding: 0 8px 10px;
+      font-weight: normal;
+    }
+    thead th:not(:first-child) { text-align: right; }
+    thead { border-bottom: 1px solid var(--border-hi); }
+    tbody tr { border-top: 1px solid var(--border); }
+    tbody { border-bottom: 1px solid var(--border); }
+    tbody tr:hover { background: var(--surface2); }
+    tbody td { padding: 10px 8px; }
+    tbody td:not(:first-child) { text-align: right; }
+    .rank {
+      display: inline-block;
+      width: 28px;
+      font-size: 0.88rem;
+      font-family: 'Courier New', monospace;
+      color: var(--text-muted);
+    }
+    .pts-col { color: var(--accent-bright); font-weight: bold; }
+    .firsts-col { color: var(--copper-hi); }
+    .player-link {
+      cursor: pointer;
+      transition: color 0.15s;
+    }
+    .player-link:hover {
+      color: var(--accent-bright);
+      text-decoration: underline;
+      text-underline-offset: 3px;
+    }
+
+    /* ── Games chart ── */
+    .chart-wrap {
+      position: relative;
+      height: 240px;
+    }
+
+    /* ── Recent sessions ── */
+    .session-list {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+    .session {
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-left: 2px solid var(--accent-dim);
+      border-radius: 2px;
+      padding: 11px 14px;
+    }
+    .session-top {
+      display: flex;
+      justify-content: space-between;
+      align-items: baseline;
+      margin-bottom: 6px;
+    }
+    .session-game { font-size: 0.92rem; color: var(--accent-bright); }
+    .session-date {
+      font-size: 0.72rem;
+      color: var(--text-muted);
+      font-family: 'Courier New', monospace;
+      letter-spacing: 0.04em;
+    }
+    .session-players { font-size: 0.78rem; color: var(--text-muted); margin-bottom: 6px; }
+    .session-podium {
+      font-size: 0.8rem;
+      color: var(--text);
+      display: flex;
+      gap: 12px;
+      flex-wrap: wrap;
+    }
+    .session-podium span { white-space: nowrap; }
+    .session-notes {
+      font-size: 0.74rem;
+      color: var(--text-muted);
+      font-style: italic;
+      margin-top: 6px;
+    }
+
+    /* ── Games catalog ── */
+    .filter-bar {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      margin-bottom: 16px;
+      flex-wrap: wrap;
+    }
+    .filter-label {
+      font-size: 0.68rem;
+      color: var(--text-muted);
+      font-family: 'Courier New', monospace;
+      text-transform: uppercase;
+      letter-spacing: 0.12em;
+      margin-right: 4px;
+    }
+    .filter-btn {
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      color: var(--text-muted);
+      border-radius: 2px;
+      padding: 5px 13px;
+      font-size: 0.78rem;
+      font-family: 'Courier New', monospace;
+      cursor: pointer;
+      letter-spacing: 0.06em;
+      transition: background 0.15s, color 0.15s, border-color 0.15s;
+    }
+    .filter-btn:hover { border-color: var(--accent-dim); color: var(--text); }
+    .filter-btn.active {
+      background: var(--accent);
+      border-color: var(--accent-bright);
+      color: #0e1014;
+      font-weight: bold;
+    }
+    .catalog-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(190px, 1fr));
+      gap: 10px;
+    }
+    .game-card {
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-top: 1px solid var(--border-hi);
+      border-radius: 2px;
+      padding: 14px 16px;
+      cursor: pointer;
+      transition: border-color 0.15s, box-shadow 0.15s;
+    }
+    .game-card.hidden { display: none; }
+    .game-card:hover {
+      border-color: var(--accent-dim);
+      box-shadow: 0 0 12px rgba(192,122,56,0.12);
+    }
+    .game-card-name { font-size: 0.92rem; color: var(--text); margin-bottom: 8px; line-height: 1.3; }
+    .game-card-meta { display: flex; justify-content: space-between; align-items: center; }
+    .game-card-players { font-size: 0.72rem; color: var(--accent); font-family: 'Courier New', monospace; }
+    .game-card-plays { font-size: 0.7rem; color: var(--text-muted); font-family: 'Courier New', monospace; }
+    .exp-badge {
+      font-size: 0.6rem;
+      font-family: 'Courier New', monospace;
+      color: var(--text-muted);
+      border: 1px solid var(--border);
+      border-radius: 2px;
+      padding: 1px 4px;
+      vertical-align: middle;
+      letter-spacing: 0.04em;
+    }
+
+    /* ── Shared modal base ── */
+    .modal-backdrop {
+      display: none;
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,0.75);
+      z-index: 100;
+      align-items: center;
+      justify-content: center;
+      padding: 24px;
+    }
+    .modal-backdrop.open { display: flex; }
+    .modal {
+      background: var(--surface);
+      border: 1px solid var(--border-hi);
+      border-top: 2px solid var(--accent);
+      border-radius: 4px;
+      width: 100%;
+      max-width: 560px;
+      max-height: 80vh;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+      box-shadow: 0 0 40px rgba(0,0,0,0.8), 0 0 20px rgba(192,122,56,0.08);
+    }
+    .modal-header {
+      padding: 18px 24px 14px;
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      gap: 16px;
+    }
+    .modal-title {
+      font-size: 1.25rem;
+      color: var(--accent-bright);
+      letter-spacing: 0.04em;
+      text-shadow: 0 0 12px rgba(192,122,56,0.3);
+    }
+    .modal-subtitle {
+      font-size: 0.72rem;
+      color: var(--text-muted);
+      font-family: 'Courier New', monospace;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      margin-top: 4px;
+    }
+    .modal-genre {
+      display: inline-block;
+      margin-top: 8px;
+      font-size: 0.68rem;
+      font-family: 'Courier New', monospace;
+      color: var(--accent);
+      border: 1px solid var(--border-hi);
+      border-radius: 2px;
+      padding: 2px 8px;
+      letter-spacing: 0.06em;
+    }
+    .modal-rules-btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      font-size: 0.7rem;
+      font-family: 'Courier New', monospace;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      color: var(--accent-bright);
+      border: 1px solid var(--accent-dim);
+      border-radius: 2px;
+      padding: 4px 10px;
+      text-decoration: none;
+      transition: background 0.15s, border-color 0.15s;
+      white-space: nowrap;
+    }
+    .modal-rules-btn:hover { background: rgba(192,122,56,0.12); border-color: var(--accent); }
+    .modal-close {
+      background: none;
+      border: 1px solid var(--border);
+      color: var(--text-muted);
+      font-size: 1rem;
+      cursor: pointer;
+      line-height: 1;
+      padding: 4px 8px;
+      border-radius: 2px;
+      flex-shrink: 0;
+      font-family: 'Courier New', monospace;
+      transition: all 0.15s;
+    }
+    .modal-close:hover { color: var(--text); border-color: var(--accent-dim); }
+    .modal-stats {
+      display: flex;
+      border-bottom: 1px solid var(--border);
+      background: var(--bg);
+    }
+    .modal-stat {
+      flex: 1;
+      padding: 12px 20px;
+      border-right: 1px solid var(--border);
+    }
+    .modal-stat:last-child { border-right: none; }
+    .modal-stat .label {
+      font-size: 0.65rem;
+      text-transform: uppercase;
+      letter-spacing: 0.12em;
+      color: var(--text-muted);
+      font-family: 'Courier New', monospace;
+      margin-bottom: 4px;
+    }
+    .modal-stat .value { font-size: 1.2rem; color: var(--accent-bright); }
+    .modal-body { overflow-y: auto; padding: 16px 24px 20px; }
+    .modal-body table { font-size: 0.85rem; }
+    .modal-body thead th { padding: 0 8px 8px; }
+    .modal-body tbody td { padding: 9px 8px; }
+    .modal-owners {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 12px 24px;
+      border-bottom: 1px solid var(--border);
+      background: var(--surface);
+      flex-wrap: wrap;
+    }
+    .modal-owners-label {
+      font-size: 0.65rem;
+      text-transform: uppercase;
+      letter-spacing: 0.12em;
+      color: var(--text-muted);
+      font-family: 'Courier New', monospace;
+      flex-shrink: 0;
+    }
+    .owner-tag {
+      background: var(--surface2);
+      border: 1px solid var(--border-hi);
+      color: var(--accent-bright);
+      font-size: 0.75rem;
+      font-family: 'Courier New', monospace;
+      padding: 3px 10px;
+      border-radius: 2px;
+      letter-spacing: 0.04em;
+    }
+    .modal-empty {
+      color: var(--text-muted);
+      font-size: 0.9rem;
+      text-align: center;
+      padding: 32px 0;
+      font-family: 'Courier New', monospace;
+      letter-spacing: 0.08em;
+    }
+
+    /* ── Expansion list in game modal ── */
+    .modal-expansions {
+      padding: 12px 24px 14px;
+      border-bottom: 1px solid var(--border);
+      background: var(--bg);
+    }
+    .modal-expansions-label {
+      font-size: 0.65rem;
+      text-transform: uppercase;
+      letter-spacing: 0.12em;
+      color: var(--text-muted);
+      font-family: 'Courier New', monospace;
+      margin-bottom: 8px;
+    }
+    .expansion-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 5px 24px;
+    }
+    .expansion-item {
+      font-size: 0.78rem;
+      font-family: 'Courier New', monospace;
+      display: flex;
+      align-items: baseline;
+      gap: 6px;
+      color: var(--text-muted);
+    }
+    .expansion-item.owned { color: var(--text); }
+    .exp-owned   { color: var(--accent-bright); }
+    .exp-unowned { color: var(--border-hi); }
+
+    /* ── Group size avg row ── */
+    .group-avg-row {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      padding: 10px 0 14px;
+      border-bottom: 1px solid var(--border);
+      margin-bottom: 14px;
+      flex-wrap: wrap;
+    }
+    .group-avg-label {
+      font-size: 0.65rem;
+      text-transform: uppercase;
+      letter-spacing: 0.12em;
+      color: var(--text-muted);
+      font-family: 'Courier New', monospace;
+      flex-shrink: 0;
+      margin-right: 4px;
+    }
+    .group-avg-chip {
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: 2px;
+      padding: 3px 10px;
+      font-size: 0.75rem;
+      font-family: 'Courier New', monospace;
+      color: var(--text);
+      white-space: nowrap;
+    }
+    .group-avg-chip span { color: var(--text-muted); margin-right: 4px; }
+
+    /* ── Player modal medals strip ── */
+    .player-medals { display: flex; gap: 18px; margin-top: 8px; }
+    .player-medal-item { display: flex; align-items: center; gap: 5px; font-size: 0.85rem; font-family: 'Courier New', monospace; }
+    .player-medal-item .medal-count { color: var(--text); font-size: 1rem; }
+
+    /* ── Responsive ── */
+    @media (max-width: 640px) {
+      header { padding: 14px 16px; gap: 10px; }
+      header h1 { font-size: 1.2rem; letter-spacing: 0.04em; }
+      header span { font-size: 0.72rem; }
+      main { padding: 14px 12px; gap: 12px; }
+      .stat-grid { grid-template-columns: repeat(2, 1fr); gap: 10px; }
+      .stat-card { padding: 14px; }
+      .stat-card .value { font-size: 1.5rem; }
+      .stat-card .sub { display: none; }
+      .two-col { grid-template-columns: 1fr; gap: 12px; }
+      .panel { padding: 14px; }
+      .chart-wrap { height: 200px; }
+      .filter-btn { padding: 8px 14px; font-size: 0.82rem; }
+      .catalog-grid { grid-template-columns: repeat(2, 1fr); gap: 8px; }
+      .game-card { padding: 12px; }
+      .modal-backdrop { align-items: flex-end; padding: 0; }
+      .modal {
+        max-width: 100%; max-height: 88vh;
+        border-radius: 14px 14px 0 0;
+        border-top: 2px solid var(--accent);
+        border-left: none; border-right: none; border-bottom: none;
+      }
+      .modal-header { padding: 16px 18px 12px; }
+      .modal-stat { padding: 10px 14px; }
+      .modal-body { padding: 14px 18px 32px; }
+    }
+  </style>
+  <style>
+    /* ── Log Session button ── */
+    .log-session-btn {
+      margin-left: auto;
+      background: transparent;
+      border: 1px solid var(--accent-dim);
+      color: var(--accent-bright);
+      font-size: 0.72rem;
+      font-family: 'Courier New', monospace;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      padding: 6px 14px;
+      border-radius: 2px;
+      cursor: pointer;
+      transition: background 0.15s, border-color 0.15s;
+      white-space: nowrap;
+    }
+    .log-session-btn:hover { background: rgba(192,122,56,0.12); border-color: var(--accent); }
+
+    /* ── Log session form ── */
+    .form-section { margin-bottom: 16px; }
+    .form-label {
+      font-size: 0.65rem;
+      text-transform: uppercase;
+      letter-spacing: 0.12em;
+      color: var(--text-muted);
+      font-family: 'Courier New', monospace;
+      display: block;
+      margin-bottom: 7px;
+    }
+    .form-input, .form-select, .form-textarea {
+      background: var(--bg);
+      border: 1px solid var(--border-hi);
+      border-radius: 2px;
+      color: var(--text);
+      font-family: 'Georgia', serif;
+      font-size: 0.88rem;
+      padding: 8px 10px;
+      width: 100%;
+      outline: none;
+      transition: border-color 0.15s;
+      -webkit-appearance: none;
+    }
+    .form-input:focus, .form-select:focus, .form-textarea:focus { border-color: var(--accent); }
+    .form-select { cursor: pointer; background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath d='M0 0l5 6 5-6z' fill='%235a6278'/%3E%3C/svg%3E"); background-repeat: no-repeat; background-position: right 10px center; padding-right: 28px; }
+    .form-textarea { resize: vertical; min-height: 64px; font-size: 0.85rem; }
+    .player-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 7px 12px; }
+    .player-check { display: flex; align-items: center; gap: 7px; font-size: 0.85rem; cursor: pointer; user-select: none; }
+    .player-check input[type="checkbox"] { accent-color: var(--accent); width: 14px; height: 14px; cursor: pointer; flex-shrink: 0; }
+    .result-options { display: flex; gap: 16px; flex-wrap: wrap; }
+    .result-option { display: flex; align-items: center; gap: 6px; font-size: 0.85rem; cursor: pointer; user-select: none; }
+    .result-option input[type="radio"] { accent-color: var(--accent); cursor: pointer; }
+    .placing-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
+    .placing-sub { font-size: 0.7rem; color: var(--text-muted); font-family: 'Courier New', monospace; margin-bottom: 5px; }
+    .duration-row { display: flex; align-items: center; gap: 12px; }
+    .duration-field { display: flex; align-items: center; gap: 7px; }
+    .duration-input { width: 64px !important; text-align: center; }
+    .duration-unit { font-size: 0.8rem; color: var(--text-muted); font-family: 'Courier New', monospace; }
+    .log-submit-btn {
+      width: 100%;
+      background: var(--accent);
+      border: none;
+      border-radius: 2px;
+      color: #0e1014;
+      font-size: 0.82rem;
+      font-family: 'Courier New', monospace;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      padding: 12px;
+      cursor: pointer;
+      font-weight: bold;
+      transition: background 0.15s;
+      margin-top: 4px;
+    }
+    .log-submit-btn:hover { background: var(--accent-bright); }
+    .log-submit-btn:disabled { background: var(--accent-dim); cursor: not-allowed; opacity: 0.7; }
+    .log-feedback { text-align: center; font-size: 0.82rem; font-family: 'Courier New', monospace; padding: 8px 0 0; min-height: 28px; }
+  </style>
+</head>
+<body>
+
+<header>
+  <h1>🎲 Board Game Night</h1>
+  <span id="data-status">loading...</span>
+  <button class="log-session-btn" onclick="openLogModal()">+ Log Session</button>
+</header>
+
+<main>
+
+  <div class="stat-grid" id="stat-grid"></div>
+
+  <div class="two-col">
+    <div class="panel">
+      <div class="section-title">Leaderboard</div>
+      <table>
+        <thead>
+          <tr>
+            <th>Player</th>
+            <th style="width:70px">Sessions</th>
+            <th style="width:60px">Pts</th>
+            <th style="width:50px">1st</th>
+          </tr>
+        </thead>
+        <tbody id="leaderboard-body"></tbody>
+      </table>
+    </div>
+
+    <div class="panel">
+      <div class="section-title">Games Played</div>
+      <div class="chart-wrap">
+        <canvas id="games-chart"></canvas>
+      </div>
+    </div>
+  </div>
+
+  <div class="panel">
+    <div class="section-title">Recent Sessions</div>
+    <div class="session-list" id="session-list"></div>
+  </div>
+
+  <div class="panel">
+    <div class="section-title">Games Library</div>
+    <div class="filter-bar">
+      <span class="filter-label">Players:</span>
+      <button class="filter-btn active" data-count="all">All</button>
+      <button class="filter-btn" data-count="2">2</button>
+      <button class="filter-btn" data-count="3">3</button>
+      <button class="filter-btn" data-count="4">4</button>
+      <button class="filter-btn" data-count="5">5</button>
+      <button class="filter-btn" data-count="6">6</button>
+    </div>
+    <div class="catalog-grid" id="catalog-grid"></div>
+  </div>
+
+</main>
+
+<!-- Game detail modal -->
+<div class="modal-backdrop" id="modal-backdrop">
+  <div class="modal">
+    <div class="modal-header">
+      <div>
+        <div class="modal-title" id="modal-title"></div>
+        <div class="modal-subtitle" id="modal-subtitle"></div>
+        <div class="modal-genre" id="modal-genre"></div>
+      </div>
+      <div style="display:flex;align-items:center;gap:8px;flex-shrink:0">
+        <a class="modal-rules-btn" id="modal-bgg-btn" href="#" target="_blank" rel="noopener">BGG ↗</a>
+        <a class="modal-rules-btn" id="modal-rules-btn" href="#" target="_blank" rel="noopener">Rules ↗</a>
+        <button class="modal-close" id="modal-close">✕</button>
+      </div>
+    </div>
+    <div class="modal-stats" id="modal-stats"></div>
+    <div class="modal-owners" id="modal-owners"></div>
+    <div class="modal-expansions" id="modal-expansions"></div>
+    <div class="modal-body" id="modal-body"></div>
+  </div>
+</div>
+
+<!-- Log session modal -->
+<div class="modal-backdrop" id="log-modal-backdrop">
+  <div class="modal" style="max-width:520px">
+    <div class="modal-header">
+      <div class="modal-title">Log a Session</div>
+      <button class="modal-close" id="log-modal-close">✕</button>
+    </div>
+    <div class="modal-body" style="padding:20px 24px 24px">
+
+      <div class="form-section">
+        <label class="form-label">Date</label>
+        <input type="date" class="form-input" id="log-date" />
+      </div>
+
+      <div class="form-section">
+        <label class="form-label">Game</label>
+        <select class="form-select" id="log-game">
+          <option value="">Select a game…</option>
+        </select>
+      </div>
+
+      <div class="form-section">
+        <label class="form-label">Players</label>
+        <div class="player-grid" id="log-players"></div>
+      </div>
+
+      <div class="form-section">
+        <label class="form-label">Result</label>
+        <div class="result-options">
+          <label class="result-option"><input type="radio" name="log-result" value="competitive" checked /> Competitive</label>
+          <label class="result-option"><input type="radio" name="log-result" value="coop_win" /> Co-op win</label>
+          <label class="result-option"><input type="radio" name="log-result" value="coop_loss" /> Co-op loss</label>
+          <label class="result-option"><input type="radio" name="log-result" value="DNF" /> DNF</label>
+        </div>
+      </div>
+
+      <div class="form-section" id="log-placing-section">
+        <label class="form-label">Placing</label>
+        <div class="placing-grid">
+          <div><div class="placing-sub">🥇 1st place</div><select class="form-select" id="log-first"><option value="">—</option></select></div>
+          <div><div class="placing-sub">🥈 2nd place</div><select class="form-select" id="log-second"><option value="">—</option></select></div>
+          <div><div class="placing-sub">🥉 3rd place</div><select class="form-select" id="log-third"><option value="">—</option></select></div>
+        </div>
+      </div>
+
+      <div class="form-section">
+        <label class="form-label">Duration <span style="color:var(--border-hi);font-size:0.85em">(optional)</span></label>
+        <div class="duration-row">
+          <div class="duration-field">
+            <input type="number" class="form-input duration-input" id="log-hours" min="0" max="12" placeholder="0" />
+            <span class="duration-unit">hrs</span>
+          </div>
+          <div class="duration-field">
+            <input type="number" class="form-input duration-input" id="log-mins" min="0" max="59" placeholder="0" />
+            <span class="duration-unit">min</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="form-section">
+        <label class="form-label">Notes <span style="color:var(--border-hi);font-size:0.85em">(optional)</span></label>
+        <textarea class="form-textarea" id="log-notes" placeholder="Anything worth remembering…"></textarea>
+      </div>
+
+      <button class="log-submit-btn" id="log-submit">Submit Session</button>
+      <div class="log-feedback" id="log-feedback"></div>
+    </div>
+  </div>
+</div>
+
+<!-- Player profile modal -->
+<div class="modal-backdrop" id="player-modal-backdrop">
+  <div class="modal">
+    <div class="modal-header">
+      <div>
+        <div class="modal-title" id="player-modal-name"></div>
+        <div class="player-medals" id="player-modal-medals"></div>
+      </div>
+      <button class="modal-close" id="player-modal-close">✕</button>
+    </div>
+    <div class="modal-stats" id="player-modal-stats"></div>
+    <div class="modal-body" id="player-modal-body"></div>
+  </div>
+</div>
+
+<script>
+// ── Config ────────────────────────────────────────────────────
+const API_URL = "https://script.google.com/macros/s/AKfycbym5BgxGLIqHwdOCT59LX-wZv63_FFPiEFk7GeYLu0nHtzm2huSmEtmm2MJsu-7WXV3DQ/exec";
+
+// ── Constants ─────────────────────────────────────────────────
+const PLACE_PTS = [3, 2, 1];
+const MEDALS    = ["🥇", "🥈", "🥉"];
+const COOP_WIN  = "Everyone!";
+const COOP_LOSS = "Loss";
+const DNF       = "DNF";
+
+// Known expansions per game. owned:true = group owns it, owned:false = available but not owned.
+const GAME_EXPANSIONS = {
+  'Catan': [
+    { name: 'Seafarers',              owned: false },
+    { name: 'Cities & Knights',       owned: false },
+    { name: 'Traders & Barbarians',   owned: false },
+    { name: 'Explorers & Pirates',    owned: false },
+  ],
+  'Ticket to Ride': [
+    { name: '1910 Card Expansion',    owned: false },
+    { name: 'The Heart of Africa',    owned: false },
+    { name: 'India & Switzerland',    owned: false },
+    { name: 'UK & Pennsylvania',      owned: false },
+    { name: 'Nordic Countries',       owned: false },
+  ],
+  'Pandemic': [
+    { name: 'On the Brink',           owned: false },
+    { name: 'In the Lab',             owned: false },
+    { name: 'State of Emergency',     owned: false },
+  ],
+  'Terraforming Mars': [
+    { name: 'Prelude',                owned: false },
+    { name: 'Venus Next',             owned: false },
+    { name: 'Hellas & Elysium',       owned: false },
+    { name: 'Colonies',               owned: false },
+    { name: 'Turmoil',                owned: false },
+  ],
+  'Wingspan': [
+    { name: 'European Expansion',     owned: false },
+    { name: 'Oceania Expansion',      owned: false },
+    { name: 'Asia Expansion',         owned: false },
+  ],
+  '7 Wonders': [
+    { name: 'Leaders',                owned: false },
+    { name: 'Cities',                 owned: false },
+    { name: 'Babel',                  owned: false },
+    { name: 'Armada',                 owned: false },
+  ],
+  'Arcs': [
+    { name: 'The Blighted Reach',     owned: true  },
+  ],
+};
+
+// ── Module state (shared with modals) ─────────────────────────
+let _playLog      = [];
+let _gamesLibrary = [];
+let _playerStats  = {};
+let _leaderboard  = [];
+let _gameCounts   = {};
+let _chart        = null;
+
+// ── Helpers ───────────────────────────────────────────────────
+function fmtDate(d) {
+  const [y, m, day] = d.split("-");
+  return `${m}-${day}-${y}`;
+}
+function fmtDuration(mins) {
+  if (!mins) return "—";
+  if (mins < 60) return `${mins}m`;
+  const h = Math.floor(mins / 60);
+  const m = mins % 60;
+  return m > 0 ? `${h}h ${m}m` : `${h}h`;
+}
+function formatOwners(owners) {
+  const result = [];
+  let remaining = [...owners];
+  if (remaining.includes("Dave") && remaining.includes("Leanna")) {
+    result.push("Loftes");
+    remaining = remaining.filter(o => o !== "Dave" && o !== "Leanna");
+  }
+  if (remaining.includes("Ben") && remaining.includes("Shannon")) {
+    result.push("Harrells");
+    remaining = remaining.filter(o => o !== "Ben" && o !== "Shannon");
+  }
+  if (remaining.includes("Marc") && remaining.includes("Heather")) {
+    result.push("Pavones");
+    remaining = remaining.filter(o => o !== "Marc" && o !== "Heather");
+  }
+  return [...result, ...remaining];
+}
+function buildPodiumHTML(s) {
+  if (s.places[0] === COOP_WIN)  return `<span style="color:var(--accent-bright)">Co-op win</span>`;
+  if (s.places[0] === COOP_LOSS) return `<span style="color:var(--red)">Co-op loss</span>`;
+  if (s.places[0] === DNF)       return `<span style="color:var(--text-muted)">Did not finish</span>`;
+  return s.places.slice(0, 3).map((name, i) => `<span>${MEDALS[i]} ${name}</span>`).join("");
+}
+
+// ── Catalog render (uses module state) ────────────────────────
+const catalogGrid = document.getElementById("catalog-grid");
+function renderCatalog(filterCount) {
+  catalogGrid.innerHTML = "";
+  _gamesLibrary.forEach(game => {
+    const plays = _gameCounts[game.name] || 0;
+    const effectiveMin = game.expansionMin ?? game.min;
+    const effectiveMax = game.expansionMax ?? game.max;
+    const visible = filterCount === "all" || (effectiveMin <= filterCount && effectiveMax >= filterCount);
+    const playerStr = effectiveMin === effectiveMax ? `${effectiveMin}` : `${effectiveMin}–${effectiveMax} players`;
+    const expBadge = game.expansionMax ? `<span class="exp-badge">+exp</span>` : "";
+    const card = document.createElement("div");
+    card.className = `game-card${visible ? "" : " hidden"}`;
+    card.innerHTML = `
+      <div class="game-card-name">${game.name}</div>
+      <div class="game-card-meta">
+        <span class="game-card-players">${playerStr} ${expBadge}</span>
+        <span class="game-card-plays">${plays > 0 ? `played ${plays}×` : "not yet played"}</span>
+      </div>`;
+    card.addEventListener("click", () => openGameModal(game));
+    catalogGrid.appendChild(card);
+  });
+}
+
+// ── Main render ───────────────────────────────────────────────
+function renderDashboard(gamesLibrary, playLog) {
+  _gamesLibrary = gamesLibrary;
+  _playLog      = playLog;
+
+  // Derived stats
+  _playerStats = {};
+  playLog.forEach(session => {
+    session.players.forEach(p => {
+      if (!_playerStats[p]) _playerStats[p] = { sessions: 0, pts: 0, firsts: 0, seconds: 0, thirds: 0 };
+      _playerStats[p].sessions++;
+    });
+    if (session.places[0] === COOP_WIN) {
+      session.players.forEach(p => { if (_playerStats[p]) _playerStats[p].pts += 2; });
+    } else if (session.places[0] !== COOP_LOSS && session.places[0] !== DNF) {
+      session.places.forEach((p, i) => {
+        if (!_playerStats[p]) return;
+        _playerStats[p].pts += PLACE_PTS[i] ?? 0;
+        if (i === 0) _playerStats[p].firsts++;
+        if (i === 1) _playerStats[p].seconds++;
+        if (i === 2) _playerStats[p].thirds++;
+      });
+    }
+  });
+
+  _leaderboard = Object.entries(_playerStats)
+    .map(([name, s]) => ({ name, ...s }))
+    .sort((a, b) => b.pts - a.pts || b.firsts - a.firsts);
+
+  _gameCounts = {};
+  playLog.forEach(s => { _gameCounts[s.game] = (_gameCounts[s.game] || 0) + 1; });
+  const sortedGames  = Object.entries(_gameCounts).sort((a, b) => b[1] - a[1]);
+  const totalSessions = playLog.length;
+  const mostPlayed   = sortedGames[0]?.[0] ?? "—";
+  const champion     = _leaderboard[0];
+
+  // Stat cards
+  const statGrid = document.getElementById("stat-grid");
+  statGrid.innerHTML = "";
+  [
+    { label: "Total Sessions",   value: totalSessions,         sub: "game nights" },
+    { label: "Games in Library", value: gamesLibrary.length,   sub: "titles" },
+    { label: "Most Played",      value: mostPlayed,            sub: sortedGames[0] ? `${sortedGames[0][1]}× played` : "" },
+    { label: "Current Champion", value: champion?.name ?? "—", sub: champion ? `${champion.pts} pts` : "" },
+  ].forEach(s => {
+    statGrid.innerHTML += `
+      <div class="stat-card">
+        <div class="label">${s.label}</div>
+        <div class="value">${s.value}</div>
+        <div class="sub">${s.sub}</div>
+      </div>`;
+  });
+
+  // Leaderboard
+  const tbody = document.getElementById("leaderboard-body");
+  tbody.innerHTML = "";
+  _leaderboard.forEach((p, i) => {
+    const rankDisplay = MEDALS[i] ?? `${i + 1}.`;
+    tbody.innerHTML += `
+      <tr>
+        <td><span class="rank">${rankDisplay}</span> <span class="player-link" onclick="openPlayerModal('${p.name}')">${p.name}</span></td>
+        <td style="text-align:right">${p.sessions}</td>
+        <td class="pts-col">${p.pts}</td>
+        <td class="firsts-col">${p.firsts}</td>
+      </tr>`;
+  });
+
+  // Chart
+  if (_chart) _chart.destroy();
+  const ctx = document.getElementById("games-chart").getContext("2d");
+  _chart = new Chart(ctx, {
+    type: "bar",
+    data: {
+      labels: sortedGames.map(([g]) => g),
+      datasets: [{
+        data: sortedGames.map(([, n]) => n),
+        backgroundColor: "rgba(192,122,56,0.6)",
+        borderColor: "rgba(212,148,70,1)",
+        borderWidth: 1,
+        borderRadius: 3,
+      }]
+    },
+    options: {
+      indexAxis: "y",
+      plugins: { legend: { display: false } },
+      scales: {
+        x: {
+          ticks: { color: "#5a6278", font: { family: "Courier New", size: 11 } },
+          grid: { color: "#2a3040" },
+          beginAtZero: true,
+          border: { color: "#2a3040" },
+        },
+        y: {
+          ticks: { color: "#c8ccd8", font: { size: 11 } },
+          grid: { display: false },
+          border: { color: "#2a3040" },
+        }
+      }
+    }
+  });
+
+  // Recent sessions
+  const sessionList = document.getElementById("session-list");
+  sessionList.innerHTML = "";
+  playLog.slice(0, 6).forEach(s => {
+    sessionList.innerHTML += `
+      <div class="session">
+        <div class="session-top">
+          <span class="session-game">${s.game}</span>
+          <span class="session-date">${fmtDate(s.date)}</span>
+        </div>
+        <div class="session-players">${s.players.join(", ")}</div>
+        <div class="session-podium">${buildPodiumHTML(s)}</div>
+        ${s.notes ? `<div class="session-notes">${s.notes}</div>` : ""}
+      </div>`;
+  });
+
+  // Catalog + reset filter
+  renderCatalog("all");
+  document.querySelectorAll(".filter-btn").forEach(b => b.classList.remove("active"));
+  document.querySelector(".filter-btn[data-count='all']").classList.add("active");
+}
+
+// ── Game Modal ────────────────────────────────────────────────
+function openGameModal(game) {
+  const sessions = _playLog.filter(s => s.game === game.name);
+  const winCounts = {};
+  sessions.forEach(s => {
+    const first = s.places[0];
+    if (first && first !== COOP_WIN && first !== COOP_LOSS && first !== DNF) {
+      winCounts[first] = (winCounts[first] || 0) + 1;
+    }
+  });
+  const topWinner = Object.entries(winCounts).sort((a, b) => b[1] - a[1])[0];
+  const durations = sessions.filter(s => s.duration).map(s => s.duration);
+  const avgTime   = durations.length
+    ? Math.round(durations.reduce((a, b) => a + b, 0) / durations.length) : null;
+  const byCount = {};
+  sessions.forEach(s => {
+    if (!s.duration) return;
+    const n = s.players.length;
+    if (!byCount[n]) byCount[n] = { total: 0, count: 0 };
+    byCount[n].total += s.duration; byCount[n].count++;
+  });
+  const groupAvgs = Object.entries(byCount).sort(([a], [b]) => a - b)
+    .map(([n, d]) => ({ players: n, avg: Math.round(d.total / d.count) }));
+
+  document.getElementById("modal-title").textContent = game.name;
+  const expStr = game.expansionMax
+    ? `  ·  ${game.expansionMin ?? game.min}–${game.expansionMax} w/ expansions` : "";
+  document.getElementById("modal-subtitle").textContent = `${game.min}–${game.max} players${expStr}`;
+  const genreEl = document.getElementById("modal-genre");
+  genreEl.textContent = game.genre ?? "";
+  genreEl.style.display = game.genre ? "" : "none";
+  document.getElementById("modal-bgg-btn").href =
+    `https://boardgamegeek.com/search/boardgame?q=${encodeURIComponent(game.name)}`;
+  const rulesBtn = document.getElementById("modal-rules-btn");
+  if (game.rulesUrl) { rulesBtn.href = game.rulesUrl; rulesBtn.style.display = ""; }
+  else { rulesBtn.style.display = "none"; }
+  const ownersEl = document.getElementById("modal-owners");
+  if (game.owners && game.owners.length > 0) {
+    ownersEl.style.display = "";
+    ownersEl.innerHTML = `<span class="modal-owners-label">Owned by</span>`
+      + formatOwners(game.owners).map(o => `<span class="owner-tag">${o}</span>`).join("");
+  } else { ownersEl.style.display = "none"; }
+  const expListEl = document.getElementById("modal-expansions");
+  const knownExps = GAME_EXPANSIONS[game.name];
+  if (knownExps && knownExps.length > 0) {
+    expListEl.style.display = "";
+    expListEl.innerHTML = `
+      <div class="modal-expansions-label">Expansions</div>
+      <div class="expansion-grid">
+        ${knownExps.map(e => `
+          <div class="expansion-item${e.owned ? " owned" : ""}">
+            <span class="${e.owned ? "exp-owned" : "exp-unowned"}">${e.owned ? "✓" : "⊘"}</span>${e.name}
+          </div>`).join("")}
+      </div>`;
+  } else {
+    expListEl.style.display = "none";
+  }
+  document.getElementById("modal-stats").innerHTML = `
+    <div class="modal-stat"><div class="label">Times Played</div><div class="value">${sessions.length}</div></div>
+    <div class="modal-stat"><div class="label">Avg Time</div><div class="value" style="font-size:1rem;padding-top:3px">${fmtDuration(avgTime)}</div></div>
+    <div class="modal-stat"><div class="label">Unique Winners</div><div class="value">${Object.keys(winCounts).length || "—"}</div></div>
+    <div class="modal-stat"><div class="label">Top Winner</div><div class="value" style="font-size:1rem;padding-top:3px">${topWinner ? `${topWinner[0]} (${topWinner[1]}×)` : "—"}</div></div>`;
+  const body = document.getElementById("modal-body");
+  if (sessions.length === 0) {
+    body.innerHTML = `<div class="modal-empty">No sessions logged yet.</div>`;
+  } else {
+    const groupAvgHTML = groupAvgs.length > 1 ? `
+      <div class="group-avg-row">
+        <span class="group-avg-label">Avg by group size</span>
+        ${groupAvgs.map(g => `<span class="group-avg-chip"><span>${g.players}p</span>${fmtDuration(g.avg)}</span>`).join("")}
+      </div>` : "";
+    body.innerHTML = groupAvgHTML + `
+      <table><thead><tr>
+        <th>Date</th><th>Players</th>
+        <th style="text-align:right">Time</th><th style="text-align:right">Podium</th>
+      </tr></thead><tbody>${sessions.map(s => {
+        let podium;
+        if (s.places[0] === COOP_WIN)      podium = `<span style="color:var(--accent-bright)">Co-op win</span>`;
+        else if (s.places[0] === COOP_LOSS) podium = `<span style="color:var(--red)">Co-op loss</span>`;
+        else if (s.places[0] === DNF)       podium = `<span style="color:var(--text-muted)">Did not finish</span>`;
+        else podium = s.places.slice(0,3).map((name,i) => `${MEDALS[i]} ${name}`).join("  ");
+        return `
+        <tr>
+          <td style="font-family:'Courier New',monospace;font-size:0.78rem;color:var(--text-muted)">${fmtDate(s.date)}</td>
+          <td style="color:var(--text-muted)">${s.players.join(", ")}</td>
+          <td style="text-align:right;font-family:'Courier New',monospace;font-size:0.78rem;color:var(--text-muted);white-space:nowrap">${fmtDuration(s.duration)}</td>
+          <td style="text-align:right;font-size:0.82rem;white-space:nowrap">${podium}</td>
+        </tr>
+        ${s.notes ? `<tr style="border-top:none"><td colspan="4" style="padding:0 8px 10px;font-size:0.75rem;color:var(--text-muted);font-style:italic">📝 ${s.notes}</td></tr>` : ""}`;
+      }).join("")}</tbody></table>`;
+  }
+  document.getElementById("modal-backdrop").classList.add("open");
+}
+
+// ── Player Modal ──────────────────────────────────────────────
+function openPlayerModal(name) {
+  const ps = _playerStats[name];
+  if (!ps) return;
+  const sessions = _playLog.filter(s => s.players.includes(name));
+  const gamePlays = {};
+  sessions.forEach(s => { gamePlays[s.game] = (gamePlays[s.game] || 0) + 1; });
+  const favGame  = Object.entries(gamePlays).sort((a, b) => b[1] - a[1])[0];
+  const rank     = _leaderboard.findIndex(p => p.name === name) + 1;
+  const rankLabel = MEDALS[rank - 1] ?? `#${rank}`;
+  document.getElementById("player-modal-name").textContent = name;
+  document.getElementById("player-modal-medals").innerHTML = `
+    <div class="player-medal-item"><span>🥇</span><span class="medal-count">${ps.firsts}</span></div>
+    <div class="player-medal-item"><span>🥈</span><span class="medal-count">${ps.seconds}</span></div>
+    <div class="player-medal-item"><span>🥉</span><span class="medal-count">${ps.thirds}</span></div>`;
+  document.getElementById("player-modal-stats").innerHTML = `
+    <div class="modal-stat"><div class="label">Rank</div><div class="value">${rankLabel}</div></div>
+    <div class="modal-stat"><div class="label">Sessions</div><div class="value">${ps.sessions}</div></div>
+    <div class="modal-stat"><div class="label">Points</div><div class="value">${ps.pts}</div></div>
+    <div class="modal-stat"><div class="label">Most Played</div><div class="value" style="font-size:0.82rem;padding-top:4px;line-height:1.3">${favGame ? favGame[0] : "—"}</div></div>`;
+  const body = document.getElementById("player-modal-body");
+  body.innerHTML = `
+    <table><thead><tr>
+      <th>Date</th><th>Game</th><th style="text-align:right">Finish</th>
+    </tr></thead><tbody>${sessions.map(s => {
+      let finish;
+      if (s.places[0] === COOP_WIN)      finish = `<span style="color:var(--accent-bright)">Co-op win</span>`;
+      else if (s.places[0] === COOP_LOSS) finish = `<span style="color:var(--red)">Co-op loss</span>`;
+      else if (s.places[0] === DNF)       finish = `<span style="color:var(--text-muted)">Did not finish</span>`;
+      else {
+        const idx = s.places.indexOf(name);
+        finish = idx >= 0
+          ? `${MEDALS[idx]} ${idx === 0 ? "1st" : idx === 1 ? "2nd" : "3rd"}`
+          : `<span style="color:var(--text-muted)">—</span>`;
+      }
+      return `
+      <tr>
+        <td style="font-family:'Courier New',monospace;font-size:0.78rem;color:var(--text-muted)">${fmtDate(s.date)}</td>
+        <td>
+          <div>${s.game}</div>
+          <div style="font-size:0.72rem;color:var(--text-muted);margin-top:2px">${s.players.filter(p => p !== name).join(", ")}</div>
+        </td>
+        <td style="text-align:right;font-size:0.82rem;white-space:nowrap">${finish}</td>
+      </tr>
+      ${s.notes ? `<tr style="border-top:none"><td colspan="3" style="padding:0 8px 10px;font-size:0.75rem;color:var(--text-muted);font-style:italic">📝 ${s.notes}</td></tr>` : ""}`;
+    }).join("")}</tbody></table>`;
+  document.getElementById("player-modal-backdrop").classList.add("open");
+}
+
+// ── Log Session Modal ─────────────────────────────────────────
+const PLAYERS = ['Dave','Leanna','Peter','Mark','Jay','Ben','Shannon','Marc','Heather','Nathan'];
+
+function openLogModal() {
+  // Default date = today
+  document.getElementById('log-date').value = new Date().toISOString().split('T')[0];
+
+  // Populate game dropdown from live library
+  const gameSelect = document.getElementById('log-game');
+  gameSelect.innerHTML = '<option value="">Select a game…</option>'
+    + _gamesLibrary.map(g => `<option value="${g.name}">${g.name}</option>`).join('');
+
+  // Render player checkboxes
+  document.getElementById('log-players').innerHTML = PLAYERS.map(p => `
+    <label class="player-check">
+      <input type="checkbox" value="${p}" onchange="updatePlacingDropdowns()" /> ${p}
+    </label>`).join('');
+
+  // Reset result type
+  document.querySelector('input[name="log-result"][value="competitive"]').checked = true;
+  document.getElementById('log-placing-section').style.display = '';
+  updatePlacingDropdowns();
+
+  // Clear fields
+  document.getElementById('log-hours').value = '';
+  document.getElementById('log-mins').value = '';
+  document.getElementById('log-notes').value = '';
+  document.getElementById('log-feedback').textContent = '';
+  const btn = document.getElementById('log-submit');
+  btn.disabled = false;
+  btn.textContent = 'Submit Session';
+
+  document.getElementById('log-modal-backdrop').classList.add('open');
+}
+
+function updatePlacingDropdowns() {
+  const checked = [...document.querySelectorAll('#log-players input:checked')].map(cb => cb.value);
+  ['log-first','log-second','log-third'].forEach(id => {
+    const sel = document.getElementById(id);
+    const cur = sel.value;
+    sel.innerHTML = '<option value="">—</option>'
+      + checked.map(p => `<option value="${p}"${p===cur?' selected':''}>${p}</option>`).join('');
+  });
+}
+
+async function submitSession() {
+  const date    = document.getElementById('log-date').value;
+  const game    = document.getElementById('log-game').value;
+  const players = [...document.querySelectorAll('#log-players input:checked')].map(cb => cb.value);
+  const result  = document.querySelector('input[name="log-result"]:checked').value;
+  const hours   = parseInt(document.getElementById('log-hours').value) || 0;
+  const mins    = parseInt(document.getElementById('log-mins').value)  || 0;
+  const duration = hours * 60 + mins;
+  const notes   = document.getElementById('log-notes').value.trim();
+
+  if (!date)              { logFeedback('Please select a date.', 'err'); return; }
+  if (!game)              { logFeedback('Please select a game.', 'err'); return; }
+  if (!players.length)    { logFeedback('Please select at least one player.', 'err'); return; }
+
+  const params = new URLSearchParams({ action: 'log', date, game });
+  players.forEach((p, i) => params.set(`p${i+1}`, p));
+
+  if (result === 'competitive') {
+    const first  = document.getElementById('log-first').value;
+    const second = document.getElementById('log-second').value;
+    const third  = document.getElementById('log-third').value;
+    if (!first) { logFeedback('Please select a 1st place winner.', 'err'); return; }
+    params.set('first', first);
+    if (second) params.set('second', second);
+    if (third)  params.set('third', third);
+  } else {
+    params.set('result', result);
+  }
+  if (duration > 0) params.set('duration', String(duration));
+  if (notes)        params.set('notes', notes);
+
+  const btn = document.getElementById('log-submit');
+  btn.disabled = true;
+  btn.textContent = 'Submitting…';
+
+  try {
+    await fetch(`${API_URL}?${params.toString()}`);
+    logFeedback('✅ Session logged!', 'ok');
+    btn.textContent = 'Logged!';
+    setTimeout(init, 1200); // refresh dashboard data
+  } catch (err) {
+    logFeedback('⚠ Could not submit — check your connection.', 'err');
+    btn.disabled = false;
+    btn.textContent = 'Submit Session';
+  }
+}
+
+function logFeedback(msg, type) {
+  const el = document.getElementById('log-feedback');
+  el.textContent = msg;
+  el.style.color = type === 'err' ? 'var(--red)' : 'var(--accent-bright)';
+}
+
+// Result type toggle
+document.querySelectorAll('input[name="log-result"]').forEach(r =>
+  r.addEventListener('change', () => {
+    const competitive = document.querySelector('input[name="log-result"]:checked').value === 'competitive';
+    document.getElementById('log-placing-section').style.display = competitive ? '' : 'none';
+  })
+);
+document.getElementById('log-submit').addEventListener('click', submitSession);
+const logBackdrop = document.getElementById('log-modal-backdrop');
+document.getElementById('log-modal-close').addEventListener('click', () => logBackdrop.classList.remove('open'));
+logBackdrop.addEventListener('click', e => { if (e.target === logBackdrop) logBackdrop.classList.remove('open'); });
+
+// ── Modal close handlers ──────────────────────────────────────
+const backdrop = document.getElementById("modal-backdrop");
+document.getElementById("modal-close").addEventListener("click", () => backdrop.classList.remove("open"));
+backdrop.addEventListener("click", e => { if (e.target === backdrop) backdrop.classList.remove("open"); });
+const playerBackdrop = document.getElementById("player-modal-backdrop");
+document.getElementById("player-modal-close").addEventListener("click", () => playerBackdrop.classList.remove("open"));
+playerBackdrop.addEventListener("click", e => { if (e.target === playerBackdrop) playerBackdrop.classList.remove("open"); });
+document.addEventListener("keydown", e => {
+  if (e.key === "Escape") { backdrop.classList.remove("open"); playerBackdrop.classList.remove("open"); logBackdrop.classList.remove("open"); }
+});
+
+// ── Filter buttons ────────────────────────────────────────────
+document.querySelectorAll(".filter-btn").forEach(btn => {
+  btn.addEventListener("click", () => {
+    document.querySelectorAll(".filter-btn").forEach(b => b.classList.remove("active"));
+    btn.classList.add("active");
+    const count = btn.dataset.count === "all" ? "all" : parseInt(btn.dataset.count);
+    renderCatalog(count);
+  });
+});
+
+// ── Init: fetch live data ─────────────────────────────────────
+async function init() {
+  try {
+    const res  = await fetch(API_URL);
+    const data = await res.json();
+    const playLog = [...data.sessions].sort((a, b) => b.date.localeCompare(a.date));
+    document.getElementById("data-status").textContent = "live data";
+    renderDashboard(data.games, playLog);
+  } catch (err) {
+    console.error("Failed to load data:", err);
+    document.getElementById("data-status").textContent = "⚠ connection error";
+    document.getElementById("session-list").innerHTML =
+      `<div style="color:var(--text-muted);font-size:0.85rem;text-align:center;padding:32px 0;font-family:'Courier New',monospace;letter-spacing:0.08em">Could not connect to Google Sheets. Please refresh.</div>`;
+  }
+}
+
+init();
+</script>
+
+</body>
+</html>
