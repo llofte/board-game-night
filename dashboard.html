@@ -534,6 +534,7 @@
     .expansion-item.owned { color: var(--text); }
     .exp-owned   { color: var(--accent-bright); }
     .exp-unowned { color: var(--border-hi); }
+    .exp-owner   { font-size: 0.68rem; color: var(--text-muted); margin-left: 2px; }
 
     /* ── Group size avg row ── */
     .group-avg-row {
@@ -1135,7 +1136,7 @@ function renderDashboard(gamesLibrary, playLog, expansions) {
   _expansions = {};
   (expansions || []).forEach(e => {
     if (!_expansions[e.game]) _expansions[e.game] = [];
-    _expansions[e.game].push({ name: e.name, owned: e.owned });
+    _expansions[e.game].push({ name: e.name, owned: e.owned, owner: e.owner || '' });
   });
 
   // Derived stats
@@ -1305,10 +1306,13 @@ function openGameModal(game) {
     expListEl.innerHTML = `
       <div class="modal-expansions-label">Expansions</div>
       <div class="expansion-grid">
-        ${knownExps.map(e => `
+        ${knownExps.map(e => {
+          const ownerTag = e.owner ? `<span class="exp-owner">${e.owner}</span>` : "";
+          return `
           <div class="expansion-item${e.owned ? " owned" : ""}">
-            <span class="${e.owned ? "exp-owned" : "exp-unowned"}">${e.owned ? "✓" : "⊘"}</span>${e.name}
-          </div>`).join("")}
+            <span class="${e.owned ? "exp-owned" : "exp-unowned"}">${e.owned ? "✓" : "⊘"}</span>${e.name}${ownerTag}
+          </div>`;
+        }).join("")}
       </div>`;
   } else {
     expListEl.style.display = "none";
