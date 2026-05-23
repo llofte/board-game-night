@@ -199,7 +199,15 @@
       border-left: 2px solid var(--accent-dim);
       border-radius: 2px;
       padding: 11px 14px;
+      cursor: pointer;
+      transition: border-left-color 0.15s, background 0.15s;
+      -webkit-tap-highlight-color: transparent;
     }
+    .session:hover {
+      border-left-color: var(--accent);
+      background: #242840;
+    }
+    .session:active { opacity: 0.8; }
     .session-top {
       display: flex;
       justify-content: space-between;
@@ -1092,7 +1100,7 @@ function renderDashboard(gamesLibrary, playLog) {
   sessionList.innerHTML = "";
   playLog.slice(0, 6).forEach(s => {
     sessionList.innerHTML += `
-      <div class="session">
+      <div class="session" data-game="${s.game}">
         <div class="session-top">
           <span class="session-game">${s.game}</span>
           <span class="session-date">${fmtDate(s.date)}</span>
@@ -1399,6 +1407,14 @@ document.getElementById("player-modal-close").addEventListener("click", () => pl
 playerBackdrop.addEventListener("click", e => { if (e.target === playerBackdrop) playerBackdrop.classList.remove("open"); });
 document.addEventListener("keydown", e => {
   if (e.key === "Escape") { backdrop.classList.remove("open"); playerBackdrop.classList.remove("open"); logBackdrop.classList.remove("open"); }
+});
+
+// ── Session list → open game modal ───────────────────────────
+document.getElementById("session-list").addEventListener("click", e => {
+  const card = e.target.closest(".session");
+  if (!card) return;
+  const game = _gamesLibrary.find(g => g.name === card.dataset.game);
+  if (game) openGameModal(game);
 });
 
 // ── Filter buttons ────────────────────────────────────────────
