@@ -860,17 +860,29 @@
       <div class="form-section">
         <label class="form-label">Duration <span style="color:var(--border-hi);font-size:0.85em">(optional)</span></label>
         <div class="chip-group" id="log-duration-chips">
-          <button class="chip" data-mins="30">30m</button>
-          <button class="chip" data-mins="60">1h</button>
-          <button class="chip" data-mins="90">1.5h</button>
           <button class="chip" data-mins="120">2h</button>
-          <button class="chip" data-mins="150">2.5h</button>
+          <button class="chip" data-mins="135">2:15</button>
+          <button class="chip" data-mins="150">2:30</button>
+          <button class="chip" data-mins="165">2:45</button>
           <button class="chip" data-mins="180">3h</button>
-          <button class="chip" data-mins="210">3.5h</button>
+          <button class="chip" data-mins="195">3:15</button>
+          <button class="chip" data-mins="210">3:30</button>
+          <button class="chip" data-mins="225">3:45</button>
           <button class="chip" data-mins="240">4h</button>
           <button class="chip" data-mins="other">Other</button>
         </div>
-        <input type="number" class="form-input" id="log-custom-mins" placeholder="enter minutes" style="display:none;margin-top:10px" min="1" />
+        <div id="log-custom-duration" style="display:none;margin-top:10px">
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+            <div>
+              <div class="placing-sub" style="margin-bottom:6px">Hours</div>
+              <input type="number" class="form-input" id="log-custom-hrs" min="0" max="12" placeholder="0" />
+            </div>
+            <div>
+              <div class="placing-sub" style="margin-bottom:6px">Minutes</div>
+              <input type="number" class="form-input" id="log-custom-min" min="0" max="59" placeholder="0" />
+            </div>
+          </div>
+        </div>
       </div>
 
       <div class="form-section">
@@ -997,17 +1009,30 @@ function buildPodiumHTML(s) {
   return s.places.slice(0, 3).map((name, i) => `<span>${MEDALS[i]} ${name}</span>`).join("");
 }
 
+// ── Returns true if the game has at least one owned expansion ─
+function hasOwnedExpansion(gameName) {
+  const exps = GAME_EXPANSIONS[gameName];
+  return exps ? exps.some(e => e.owned) : false;
+}
+
+// ── Effective player range accounting for owned expansions only
+function effectiveRange(game) {
+  if (hasOwnedExpansion(game.name) && game.expansionMax) {
+    return { min: game.expansionMin ?? game.min, max: game.expansionMax };
+  }
+  return { min: game.min, max: game.max };
+}
+
 // ── Catalog render (uses module state) ────────────────────────
 const catalogGrid = document.getElementById("catalog-grid");
 function renderCatalog(filterCount) {
   catalogGrid.innerHTML = "";
   _gamesLibrary.forEach(game => {
     const plays = _gameCounts[game.name] || 0;
-    const effectiveMin = game.expansionMin ?? game.min;
-    const effectiveMax = game.expansionMax ?? game.max;
+    const { min: effectiveMin, max: effectiveMax } = effectiveRange(game);
     const visible = filterCount === "all" || (effectiveMin <= filterCount && effectiveMax >= filterCount);
     const playerStr = effectiveMin === effectiveMax ? `${effectiveMin}` : `${effectiveMin}–${effectiveMax} players`;
-    const expBadge = game.expansionMax ? `<span class="exp-badge">+exp</span>` : "";
+    const expBadge = hasOwnedExpansion(game.name) ? `<span class="exp-badge">+exp</span>` : "";
     const card = document.createElement("div");
     card.className = `game-card${visible ? "" : " hidden"}`;
     card.innerHTML = `
@@ -1310,8 +1335,9 @@ function openLogModal() {
 
   // Reset duration chips
   document.querySelectorAll('#log-duration-chips .chip').forEach(c => c.classList.remove('active'));
-  document.getElementById('log-custom-mins').style.display = 'none';
-  document.getElementById('log-custom-mins').value = '';
+  document.getElementById('log-custom-duration').style.display = 'none';
+  document.getElementById('log-custom-hrs').value = '';
+  document.getElementById('log-custom-min').value = '';
 
   document.getElementById('log-notes').value = '';
   document.getElementById('log-feedback').textContent = '';
@@ -1344,7 +1370,9 @@ async function submitSession() {
   if (durChip && durChip.dataset.mins !== 'other') {
     duration = parseInt(durChip.dataset.mins) || 0;
   } else if (durChip && durChip.dataset.mins === 'other') {
-    duration = parseInt(document.getElementById('log-custom-mins').value) || 0;
+    const hrs = parseInt(document.getElementById('log-custom-hrs').value) || 0;
+    const min = parseInt(document.getElementById('log-custom-min').value) || 0;
+    duration = hrs * 60 + min;
   }
 
   const notes = document.getElementById('log-notes').value.trim();
@@ -1416,7 +1444,7 @@ document.getElementById('log-duration-chips').addEventListener('click', e => {
   if (!chip) return;
   document.querySelectorAll('#log-duration-chips .chip').forEach(c => c.classList.remove('active'));
   chip.classList.add('active');
-  document.getElementById('log-custom-mins').style.display =
+  document.getElementById('log-custom-duration').style.display =
     chip.dataset.mins === 'other' ? '' : 'none';
 });
 
