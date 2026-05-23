@@ -846,6 +846,8 @@
       <button class="filter-btn" data-count="4">4</button>
       <button class="filter-btn" data-count="5">5</button>
       <button class="filter-btn" data-count="6">6</button>
+      <button class="filter-btn" data-count="7">7</button>
+      <button class="filter-btn" data-count="8">8</button>
     </div>
     <div class="catalog-grid" id="catalog-grid"></div>
   </div>
@@ -1041,63 +1043,11 @@ const COOP_WIN  = "Everyone!";
 const COOP_LOSS = "Loss";
 const DNF       = "DNF";
 
-// Known expansions per game. owned:true = group owns it, owned:false = available but not owned.
-const GAME_EXPANSIONS = {
-  'Catan': [
-    { name: 'Seafarers',              owned: false },
-    { name: 'Cities & Knights',       owned: false },
-    { name: 'Traders & Barbarians',   owned: false },
-    { name: 'Explorers & Pirates',    owned: false },
-  ],
-  'Ticket to Ride': [
-    { name: '1910 Card Expansion',    owned: false },
-    { name: 'The Heart of Africa',    owned: false },
-    { name: 'India & Switzerland',    owned: false },
-    { name: 'UK & Pennsylvania',      owned: false },
-    { name: 'Nordic Countries',       owned: false },
-  ],
-  'Pandemic': [
-    { name: 'On the Brink',           owned: false },
-    { name: 'In the Lab',             owned: false },
-    { name: 'State of Emergency',     owned: false },
-  ],
-  'Terraforming Mars': [
-    { name: 'Prelude',                owned: false },
-    { name: 'Venus Next',             owned: false },
-    { name: 'Hellas & Elysium',       owned: false },
-    { name: 'Colonies',               owned: false },
-    { name: 'Turmoil',                owned: false },
-  ],
-  'Wingspan': [
-    { name: 'European Expansion',     owned: false },
-    { name: 'Oceania Expansion',      owned: false },
-    { name: 'Asia Expansion',         owned: false },
-  ],
-  '7 Wonders': [
-    { name: 'Leaders',                owned: false },
-    { name: 'Cities',                 owned: false },
-    { name: 'Babel',                  owned: false },
-    { name: 'Armada',                 owned: false },
-  ],
-  'Arcs': [
-    { name: 'The Blighted Reach',     owned: true  },
-  ],
-  'Root': [
-    { name: 'The Riverfolk Expansion',     owned: true  },
-    { name: 'The Underworld Expansion',    owned: true  },
-    { name: 'The Marauder Expansion',      owned: true  },
-    { name: 'The Clockwork Expansion',     owned: false },
-    { name: 'The Clockwork Expansion 2',   owned: false },
-    { name: 'The Exiles & Partisans Deck', owned: true  },
-    { name: 'Landmarks Pack',              owned: true  },
-    { name: 'Hirelings Pack',              owned: true  },
-    { name: 'The Vagabond Pack',           owned: true  },
-  ],
-};
 
 // ── Module state (shared with modals) ─────────────────────────
 let _playLog      = [];
 let _gamesLibrary = [];
+let _expansions   = {};   // { gameName: [{ name, owned }] }
 let _playerStats  = {};
 let _leaderboard  = [];
 let _gameCounts   = {};
@@ -1141,7 +1091,7 @@ function buildPodiumHTML(s) {
 
 // ── Returns true if the game has at least one owned expansion ─
 function hasOwnedExpansion(gameName) {
-  const exps = GAME_EXPANSIONS[gameName];
+  const exps = _expansions[gameName];
   return exps ? exps.some(e => e.owned) : false;
 }
 
@@ -1177,9 +1127,16 @@ function renderCatalog(filterCount) {
 }
 
 // ── Main render ───────────────────────────────────────────────
-function renderDashboard(gamesLibrary, playLog) {
+function renderDashboard(gamesLibrary, playLog, expansions) {
   _gamesLibrary = gamesLibrary;
   _playLog      = playLog;
+
+  // Build expansions lookup from API data
+  _expansions = {};
+  (expansions || []).forEach(e => {
+    if (!_expansions[e.game]) _expansions[e.game] = [];
+    _expansions[e.game].push({ name: e.name, owned: e.owned });
+  });
 
   // Derived stats
   _playerStats = {};
@@ -1342,7 +1299,7 @@ function openGameModal(game) {
       + formatOwners(game.owners).map(o => `<span class="owner-tag">${o}</span>`).join("");
   } else { ownersEl.style.display = "none"; }
   const expListEl = document.getElementById("modal-expansions");
-  const knownExps = GAME_EXPANSIONS[game.name];
+  const knownExps = _expansions[game.name];
   if (knownExps && knownExps.length > 0) {
     expListEl.style.display = "";
     expListEl.innerHTML = `
@@ -1724,7 +1681,7 @@ async function init() {
       const data = JSON.parse(cached);
       const playLog = [...data.sessions].sort((a, b) => b.date.localeCompare(a.date));
       statusEl.textContent = "updating…";
-      renderDashboard(data.games, playLog);
+      renderDashboard(data.games, playLog, data.expansions || []);
     } catch (_) { /* ignore corrupt cache */ }
   }
 
@@ -1735,7 +1692,7 @@ async function init() {
     const playLog = [...data.sessions].sort((a, b) => b.date.localeCompare(a.date));
     localStorage.setItem(CACHE_KEY, JSON.stringify(data));
     statusEl.textContent = "live data";
-    renderDashboard(data.games, playLog);
+    renderDashboard(data.games, playLog, data.expansions || []);
   } catch (err) {
     console.error("Failed to load data:", err);
     if (cached) {
