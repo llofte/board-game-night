@@ -516,20 +516,55 @@
 
     /* ── Responsive ── */
     @media (max-width: 640px) {
+      /* Header */
       header { padding: 14px 16px; gap: 10px; }
       header h1 { font-size: 1.2rem; letter-spacing: 0.04em; }
-      header span { font-size: 0.72rem; }
+      header span { font-size: 0.78rem; }
+
+      /* Layout */
       main { padding: 14px 12px; gap: 12px; }
-      .stat-grid { grid-template-columns: repeat(2, 1fr); gap: 10px; }
-      .stat-card { padding: 14px; }
-      .stat-card .value { font-size: 1.5rem; }
-      .stat-card .sub { display: none; }
       .two-col { grid-template-columns: 1fr; gap: 12px; }
       .panel { padding: 14px; }
+
+      /* Stat cards */
+      .stat-grid { grid-template-columns: repeat(2, 1fr); gap: 10px; }
+      .stat-card { padding: 14px; }
+      .stat-card .label { font-size: 0.76rem; }
+      .stat-card .value { font-size: 1.5rem; }
+      .stat-card .sub { display: none; }
+
+      /* Section titles */
+      .section-title { font-size: 0.78rem; letter-spacing: 0.1em; }
+
+      /* Tables */
+      table { font-size: 0.9rem; }
+      thead th { font-size: 0.76rem; }
+
+      /* Chart */
       .chart-wrap { height: 200px; }
-      .filter-btn { padding: 8px 14px; font-size: 0.82rem; }
+
+      /* Recent sessions */
+      .session-game { font-size: 0.96rem; }
+      .session-date { font-size: 0.8rem; }
+      .session-players { font-size: 0.86rem; }
+      .session-podium { font-size: 0.86rem; gap: 10px; }
+      .session-notes { font-size: 0.82rem; }
+
+      /* Catalog filter */
+      .filter-label { font-size: 0.76rem; }
+      .filter-btn { padding: 8px 14px; font-size: 0.84rem; }
+
+      /* Game cards */
       .catalog-grid { grid-template-columns: repeat(2, 1fr); gap: 8px; }
       .game-card { padding: 12px; }
+      .game-card-name { font-size: 0.96rem; }
+      .game-card-players { font-size: 0.8rem; }
+      .game-card-plays { font-size: 0.76rem; }
+
+      /* Log Session button in header */
+      .log-session-btn { font-size: 0.8rem; padding: 7px 12px; }
+
+      /* Modal base — slides up from bottom */
       .modal-backdrop { align-items: flex-end; padding: 0; }
       .modal {
         max-width: 100%; max-height: 88vh;
@@ -538,8 +573,33 @@
         border-left: none; border-right: none; border-bottom: none;
       }
       .modal-header { padding: 16px 18px 12px; }
+      .modal-title { font-size: 1.15rem; }
+      .modal-subtitle { font-size: 0.8rem; }
+      .modal-genre { font-size: 0.76rem; }
+      .modal-rules-btn { font-size: 0.78rem; padding: 6px 10px; }
+      .modal-close { padding: 7px 11px; }
+
+      /* Modal stats strip */
       .modal-stat { padding: 10px 14px; }
-      .modal-body { padding: 14px 18px 32px; }
+      .modal-stat .label { font-size: 0.73rem; }
+
+      /* Owners & expansions */
+      .modal-owners { padding: 10px 18px; }
+      .modal-owners-label { font-size: 0.73rem; }
+      .modal-expansions { padding: 10px 18px 12px; }
+      .modal-expansions-label { font-size: 0.73rem; }
+      .expansion-item { font-size: 0.84rem; }
+
+      /* Modal body */
+      .modal-body { padding: 14px 18px 32px; overflow-x: hidden; }
+      .modal-empty { font-size: 0.9rem; }
+      .group-avg-label { font-size: 0.73rem; }
+      .group-avg-chip { font-size: 0.82rem; }
+
+      /* Log form */
+      .form-label { font-size: 0.73rem; }
+      .placing-sub { font-size: 0.78rem; }
+      .log-feedback { font-size: 0.88rem; }
     }
   </style>
   <style>
