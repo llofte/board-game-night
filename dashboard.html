@@ -562,7 +562,7 @@
     .log-session-btn:hover { background: rgba(192,122,56,0.12); border-color: var(--accent); }
 
     /* ── Log session form ── */
-    .form-section { margin-bottom: 16px; }
+    .form-section { margin-bottom: 18px; }
     .form-label {
       font-size: 0.65rem;
       text-transform: uppercase;
@@ -570,7 +570,7 @@
       color: var(--text-muted);
       font-family: 'Courier New', monospace;
       display: block;
-      margin-bottom: 7px;
+      margin-bottom: 9px;
     }
     .form-input, .form-select, .form-textarea {
       background: var(--bg);
@@ -578,43 +578,60 @@
       border-radius: 2px;
       color: var(--text);
       font-family: 'Georgia', serif;
-      font-size: 0.88rem;
-      padding: 8px 10px;
+      font-size: 0.95rem;
+      padding: 10px 12px;
       width: 100%;
       outline: none;
       transition: border-color 0.15s;
       -webkit-appearance: none;
     }
     .form-input:focus, .form-select:focus, .form-textarea:focus { border-color: var(--accent); }
-    .form-select { cursor: pointer; background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath d='M0 0l5 6 5-6z' fill='%235a6278'/%3E%3C/svg%3E"); background-repeat: no-repeat; background-position: right 10px center; padding-right: 28px; }
-    .form-textarea { resize: vertical; min-height: 64px; font-size: 0.85rem; }
-    .player-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 7px 12px; }
-    .player-check { display: flex; align-items: center; gap: 7px; font-size: 0.85rem; cursor: pointer; user-select: none; }
-    .player-check input[type="checkbox"] { accent-color: var(--accent); width: 14px; height: 14px; cursor: pointer; flex-shrink: 0; }
-    .result-options { display: flex; gap: 16px; flex-wrap: wrap; }
-    .result-option { display: flex; align-items: center; gap: 6px; font-size: 0.85rem; cursor: pointer; user-select: none; }
-    .result-option input[type="radio"] { accent-color: var(--accent); cursor: pointer; }
+    .form-select { cursor: pointer; background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath d='M0 0l5 6 5-6z' fill='%235a6278'/%3E%3C/svg%3E"); background-repeat: no-repeat; background-position: right 12px center; padding-right: 32px; }
+    .form-textarea { resize: vertical; min-height: 70px; font-size: 0.9rem; }
+
+    /* Tap chips — used for players, result type, duration */
+    .chip-group { display: flex; flex-wrap: wrap; gap: 8px; }
+    .chip {
+      background: var(--surface2);
+      border: 1px solid var(--border-hi);
+      border-radius: 20px;
+      padding: 9px 18px;
+      font-size: 0.88rem;
+      font-family: 'Georgia', serif;
+      cursor: pointer;
+      user-select: none;
+      transition: background 0.12s, border-color 0.12s, color 0.12s;
+      color: var(--text-muted);
+      white-space: nowrap;
+      -webkit-tap-highlight-color: transparent;
+    }
+    .chip:active { opacity: 0.75; }
+    .chip.active {
+      background: var(--accent);
+      border-color: var(--accent-bright);
+      color: #0e1014;
+      font-weight: bold;
+    }
+
     .placing-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
-    .placing-sub { font-size: 0.7rem; color: var(--text-muted); font-family: 'Courier New', monospace; margin-bottom: 5px; }
-    .duration-row { display: flex; align-items: center; gap: 12px; }
-    .duration-field { display: flex; align-items: center; gap: 7px; }
-    .duration-input { width: 64px !important; text-align: center; }
-    .duration-unit { font-size: 0.8rem; color: var(--text-muted); font-family: 'Courier New', monospace; }
+    .placing-sub { font-size: 0.7rem; color: var(--text-muted); font-family: 'Courier New', monospace; margin-bottom: 6px; }
+
     .log-submit-btn {
       width: 100%;
       background: var(--accent);
       border: none;
       border-radius: 2px;
       color: #0e1014;
-      font-size: 0.82rem;
+      font-size: 0.88rem;
       font-family: 'Courier New', monospace;
       letter-spacing: 0.1em;
       text-transform: uppercase;
-      padding: 12px;
+      padding: 14px;
       cursor: pointer;
       font-weight: bold;
       transition: background 0.15s;
       margin-top: 4px;
+      -webkit-tap-highlight-color: transparent;
     }
     .log-submit-btn:hover { background: var(--accent-bright); }
     .log-submit-btn:disabled { background: var(--accent-dim); cursor: not-allowed; opacity: 0.7; }
@@ -707,7 +724,7 @@
       <div class="modal-title">Log a Session</div>
       <button class="modal-close" id="log-modal-close">✕</button>
     </div>
-    <div class="modal-body" style="padding:20px 24px 24px">
+    <div class="modal-body" style="padding:20px 24px 28px">
 
       <div class="form-section">
         <label class="form-label">Date</label>
@@ -723,16 +740,16 @@
 
       <div class="form-section">
         <label class="form-label">Players</label>
-        <div class="player-grid" id="log-players"></div>
+        <div class="chip-group" id="log-players"></div>
       </div>
 
       <div class="form-section">
         <label class="form-label">Result</label>
-        <div class="result-options">
-          <label class="result-option"><input type="radio" name="log-result" value="competitive" checked /> Competitive</label>
-          <label class="result-option"><input type="radio" name="log-result" value="coop_win" /> Co-op win</label>
-          <label class="result-option"><input type="radio" name="log-result" value="coop_loss" /> Co-op loss</label>
-          <label class="result-option"><input type="radio" name="log-result" value="DNF" /> DNF</label>
+        <div class="chip-group" id="log-result-chips">
+          <button class="chip active" data-value="competitive">Competitive</button>
+          <button class="chip" data-value="coop_win">Co-op win</button>
+          <button class="chip" data-value="coop_loss">Co-op loss</button>
+          <button class="chip" data-value="DNF">DNF</button>
         </div>
       </div>
 
@@ -747,16 +764,18 @@
 
       <div class="form-section">
         <label class="form-label">Duration <span style="color:var(--border-hi);font-size:0.85em">(optional)</span></label>
-        <div class="duration-row">
-          <div class="duration-field">
-            <input type="number" class="form-input duration-input" id="log-hours" min="0" max="12" placeholder="0" />
-            <span class="duration-unit">hrs</span>
-          </div>
-          <div class="duration-field">
-            <input type="number" class="form-input duration-input" id="log-mins" min="0" max="59" placeholder="0" />
-            <span class="duration-unit">min</span>
-          </div>
+        <div class="chip-group" id="log-duration-chips">
+          <button class="chip" data-mins="30">30m</button>
+          <button class="chip" data-mins="60">1h</button>
+          <button class="chip" data-mins="90">1.5h</button>
+          <button class="chip" data-mins="120">2h</button>
+          <button class="chip" data-mins="150">2.5h</button>
+          <button class="chip" data-mins="180">3h</button>
+          <button class="chip" data-mins="210">3.5h</button>
+          <button class="chip" data-mins="240">4h</button>
+          <button class="chip" data-mins="other">Other</button>
         </div>
+        <input type="number" class="form-input" id="log-custom-mins" placeholder="enter minutes" style="display:none;margin-top:10px" min="1" />
       </div>
 
       <div class="form-section">
@@ -1177,28 +1196,28 @@ function openPlayerModal(name) {
 const PLAYERS = ['Dave','Leanna','Peter','Mark','Jay','Ben','Shannon','Marc','Heather','Nathan'];
 
 function openLogModal() {
-  // Default date = today
   document.getElementById('log-date').value = new Date().toISOString().split('T')[0];
 
-  // Populate game dropdown from live library
+  // Game dropdown
   const gameSelect = document.getElementById('log-game');
   gameSelect.innerHTML = '<option value="">Select a game…</option>'
     + _gamesLibrary.map(g => `<option value="${g.name}">${g.name}</option>`).join('');
 
-  // Render player checkboxes
-  document.getElementById('log-players').innerHTML = PLAYERS.map(p => `
-    <label class="player-check">
-      <input type="checkbox" value="${p}" onchange="updatePlacingDropdowns()" /> ${p}
-    </label>`).join('');
+  // Player chips
+  document.getElementById('log-players').innerHTML = PLAYERS.map(p =>
+    `<button class="chip" data-player="${p}">${p}</button>`).join('');
 
-  // Reset result type
-  document.querySelector('input[name="log-result"][value="competitive"]').checked = true;
+  // Reset result chips
+  document.querySelectorAll('#log-result-chips .chip').forEach(c => c.classList.remove('active'));
+  document.querySelector('#log-result-chips .chip[data-value="competitive"]').classList.add('active');
   document.getElementById('log-placing-section').style.display = '';
   updatePlacingDropdowns();
 
-  // Clear fields
-  document.getElementById('log-hours').value = '';
-  document.getElementById('log-mins').value = '';
+  // Reset duration chips
+  document.querySelectorAll('#log-duration-chips .chip').forEach(c => c.classList.remove('active'));
+  document.getElementById('log-custom-mins').style.display = 'none';
+  document.getElementById('log-custom-mins').value = '';
+
   document.getElementById('log-notes').value = '';
   document.getElementById('log-feedback').textContent = '';
   const btn = document.getElementById('log-submit');
@@ -1209,28 +1228,35 @@ function openLogModal() {
 }
 
 function updatePlacingDropdowns() {
-  const checked = [...document.querySelectorAll('#log-players input:checked')].map(cb => cb.value);
+  const selected = [...document.querySelectorAll('#log-players .chip.active')].map(c => c.dataset.player);
   ['log-first','log-second','log-third'].forEach(id => {
     const sel = document.getElementById(id);
     const cur = sel.value;
     sel.innerHTML = '<option value="">—</option>'
-      + checked.map(p => `<option value="${p}"${p===cur?' selected':''}>${p}</option>`).join('');
+      + selected.map(p => `<option value="${p}"${p===cur?' selected':''}>${p}</option>`).join('');
   });
 }
 
 async function submitSession() {
   const date    = document.getElementById('log-date').value;
   const game    = document.getElementById('log-game').value;
-  const players = [...document.querySelectorAll('#log-players input:checked')].map(cb => cb.value);
-  const result  = document.querySelector('input[name="log-result"]:checked').value;
-  const hours   = parseInt(document.getElementById('log-hours').value) || 0;
-  const mins    = parseInt(document.getElementById('log-mins').value)  || 0;
-  const duration = hours * 60 + mins;
-  const notes   = document.getElementById('log-notes').value.trim();
+  const players = [...document.querySelectorAll('#log-players .chip.active')].map(c => c.dataset.player);
+  const resultChip = document.querySelector('#log-result-chips .chip.active');
+  const result  = resultChip ? resultChip.dataset.value : 'competitive';
 
-  if (!date)              { logFeedback('Please select a date.', 'err'); return; }
-  if (!game)              { logFeedback('Please select a game.', 'err'); return; }
-  if (!players.length)    { logFeedback('Please select at least one player.', 'err'); return; }
+  const durChip = document.querySelector('#log-duration-chips .chip.active');
+  let duration = 0;
+  if (durChip && durChip.dataset.mins !== 'other') {
+    duration = parseInt(durChip.dataset.mins) || 0;
+  } else if (durChip && durChip.dataset.mins === 'other') {
+    duration = parseInt(document.getElementById('log-custom-mins').value) || 0;
+  }
+
+  const notes = document.getElementById('log-notes').value.trim();
+
+  if (!date)           { logFeedback('Please select a date.', 'err'); return; }
+  if (!game)           { logFeedback('Please select a game.', 'err'); return; }
+  if (!players.length) { logFeedback('Please select at least one player.', 'err'); return; }
 
   const params = new URLSearchParams({ action: 'log', date, game });
   players.forEach((p, i) => params.set(`p${i+1}`, p));
@@ -1257,7 +1283,7 @@ async function submitSession() {
     await fetch(`${API_URL}?${params.toString()}`);
     logFeedback('✅ Session logged!', 'ok');
     btn.textContent = 'Logged!';
-    setTimeout(init, 1200); // refresh dashboard data
+    setTimeout(init, 1200);
   } catch (err) {
     logFeedback('⚠ Could not submit — check your connection.', 'err');
     btn.disabled = false;
@@ -1271,13 +1297,34 @@ function logFeedback(msg, type) {
   el.style.color = type === 'err' ? 'var(--red)' : 'var(--accent-bright)';
 }
 
-// Result type toggle
-document.querySelectorAll('input[name="log-result"]').forEach(r =>
-  r.addEventListener('change', () => {
-    const competitive = document.querySelector('input[name="log-result"]:checked').value === 'competitive';
-    document.getElementById('log-placing-section').style.display = competitive ? '' : 'none';
-  })
-);
+// Player chip clicks
+document.getElementById('log-players').addEventListener('click', e => {
+  const chip = e.target.closest('.chip');
+  if (!chip) return;
+  chip.classList.toggle('active');
+  updatePlacingDropdowns();
+});
+
+// Result chip clicks (single select)
+document.getElementById('log-result-chips').addEventListener('click', e => {
+  const chip = e.target.closest('.chip');
+  if (!chip) return;
+  document.querySelectorAll('#log-result-chips .chip').forEach(c => c.classList.remove('active'));
+  chip.classList.add('active');
+  document.getElementById('log-placing-section').style.display =
+    chip.dataset.value === 'competitive' ? '' : 'none';
+});
+
+// Duration chip clicks (single select)
+document.getElementById('log-duration-chips').addEventListener('click', e => {
+  const chip = e.target.closest('.chip');
+  if (!chip) return;
+  document.querySelectorAll('#log-duration-chips .chip').forEach(c => c.classList.remove('active'));
+  chip.classList.add('active');
+  document.getElementById('log-custom-mins').style.display =
+    chip.dataset.mins === 'other' ? '' : 'none';
+});
+
 document.getElementById('log-submit').addEventListener('click', submitSession);
 const logBackdrop = document.getElementById('log-modal-backdrop');
 document.getElementById('log-modal-close').addEventListener('click', () => logBackdrop.classList.remove('open'));
