@@ -221,15 +221,21 @@
       font-family: 'Courier New', monospace;
       letter-spacing: 0.04em;
     }
-    .session-players { font-size: 0.78rem; color: var(--text-muted); margin-bottom: 6px; }
+    .session-players {
+      font-size: 0.78rem;
+      color: var(--text-muted);
+      margin-bottom: 6px;
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+    }
     .session-podium {
       font-size: 0.8rem;
       color: var(--text);
       display: flex;
-      gap: 12px;
-      flex-wrap: wrap;
+      flex-direction: column;
+      gap: 4px;
     }
-    .session-podium span { white-space: nowrap; }
     .session-notes {
       font-size: 0.74rem;
       color: var(--text-muted);
@@ -964,10 +970,10 @@ function formatOwners(owners) {
   return [...result, ...remaining];
 }
 function buildPodiumHTML(s) {
-  if (s.places[0] === COOP_WIN)  return `<span style="color:var(--accent-bright)">Co-op win</span>`;
-  if (s.places[0] === COOP_LOSS) return `<span style="color:var(--red)">Co-op loss</span>`;
-  if (s.places[0] === DNF)       return `<span style="color:var(--text-muted)">Did not finish</span>`;
-  return s.places.slice(0, 3).map((name, i) => `<span>${MEDALS[i]} ${name}</span>`).join("");
+  if (s.places[0] === COOP_WIN)  return `<div style="color:var(--accent-bright)">Co-op win 🎉</div>`;
+  if (s.places[0] === COOP_LOSS) return `<div style="color:var(--red)">Co-op loss</div>`;
+  if (s.places[0] === DNF)       return `<div style="color:var(--text-muted)">Did not finish</div>`;
+  return s.places.slice(0, 3).map((name, i) => `<div>${MEDALS[i]} ${name}</div>`).join("");
 }
 
 // ── Catalog render (uses module state) ────────────────────────
@@ -1105,7 +1111,7 @@ function renderDashboard(gamesLibrary, playLog) {
           <span class="session-game">${s.game}</span>
           <span class="session-date">${fmtDate(s.date)}</span>
         </div>
-        <div class="session-players">${s.players.join(", ")}</div>
+        <div class="session-players">${s.players.map(p => `<div>${p}</div>`).join("")}</div>
         <div class="session-podium">${buildPodiumHTML(s)}</div>
         ${s.notes ? `<div class="session-notes">${s.notes}</div>` : ""}
       </div>`;
