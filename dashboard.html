@@ -171,6 +171,38 @@
     }
     .pts-col { color: var(--accent-bright); font-weight: bold; }
     .firsts-col { color: var(--copper-hi); }
+
+    /* ── Section header (title + action button) ── */
+    .section-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 16px;
+      padding-bottom: 8px;
+      border-bottom: 1px solid var(--border);
+    }
+    .section-header .section-title {
+      margin-bottom: 0;
+      padding-bottom: 0;
+      border-bottom: none;
+    }
+    .add-game-btn {
+      background: transparent;
+      border: 1px solid var(--accent-dim);
+      color: var(--accent-bright);
+      font-size: 0.68rem;
+      font-family: 'Courier New', monospace;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      padding: 4px 10px;
+      border-radius: 2px;
+      cursor: pointer;
+      white-space: nowrap;
+      transition: background 0.15s, border-color 0.15s;
+      -webkit-tap-highlight-color: transparent;
+    }
+    .add-game-btn:hover { background: rgba(192,122,56,0.12); border-color: var(--accent); }
+
     .pts-legend {
       display: flex;
       flex-wrap: wrap;
@@ -802,7 +834,10 @@
   </div>
 
   <div class="panel">
-    <div class="section-title">Games Library</div>
+    <div class="section-header">
+      <div class="section-title">Games Library</div>
+      <button class="add-game-btn" onclick="openAddGameModal()">+ Add Game</button>
+    </div>
     <div class="filter-bar">
       <span class="filter-label">Players:</span>
       <button class="filter-btn active" data-count="all">All</button>
@@ -923,6 +958,81 @@
 
       <button class="log-submit-btn" id="log-submit">Submit Session</button>
       <div class="log-feedback" id="log-feedback"></div>
+    </div>
+  </div>
+</div>
+
+<!-- Add Game modal -->
+<div class="modal-backdrop" id="add-game-modal-backdrop">
+  <div class="modal" style="max-width:520px">
+    <div class="modal-header">
+      <div class="modal-title">Add a Game</div>
+      <button class="modal-close" id="add-game-modal-close">✕</button>
+    </div>
+    <div class="modal-body" style="padding:20px 24px 28px">
+
+      <div class="form-section">
+        <label class="form-label">Game Name</label>
+        <input type="text" class="form-input" id="ag-name" placeholder="e.g. Wingspan" autocomplete="off" />
+      </div>
+
+      <div class="form-section">
+        <label class="form-label">Players</label>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+          <div>
+            <div class="placing-sub" style="margin-bottom:6px">Min</div>
+            <input type="number" class="form-input" id="ag-min" min="1" max="20" placeholder="2" />
+          </div>
+          <div>
+            <div class="placing-sub" style="margin-bottom:6px">Max</div>
+            <input type="number" class="form-input" id="ag-max" min="1" max="20" placeholder="5" />
+          </div>
+        </div>
+      </div>
+
+      <div class="form-section">
+        <label class="form-label">With expansion <span style="color:var(--border-hi);font-size:0.85em">(optional — only if expansion changes player count)</span></label>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+          <div>
+            <div class="placing-sub" style="margin-bottom:6px">Min</div>
+            <input type="number" class="form-input" id="ag-exp-min" min="1" max="20" placeholder="—" />
+          </div>
+          <div>
+            <div class="placing-sub" style="margin-bottom:6px">Max</div>
+            <input type="number" class="form-input" id="ag-exp-max" min="1" max="20" placeholder="—" />
+          </div>
+        </div>
+      </div>
+
+      <div class="form-section">
+        <label class="form-label">Owned by <span style="color:var(--border-hi);font-size:0.85em">(optional)</span></label>
+        <div class="chip-group" id="ag-owners"></div>
+      </div>
+
+      <div class="form-section">
+        <label class="form-label">Genre <span style="color:var(--border-hi);font-size:0.85em">(optional)</span></label>
+        <input type="text" class="form-input" id="ag-genre" placeholder="e.g. Engine Building" autocomplete="off" list="ag-genre-list" />
+        <datalist id="ag-genre-list">
+          <option value="Adventure" />
+          <option value="Civilization" />
+          <option value="Cooperative" />
+          <option value="Deck Building" />
+          <option value="Engine Building" />
+          <option value="Resource Management" />
+          <option value="Route Building" />
+          <option value="Social Deduction" />
+          <option value="Space Strategy" />
+          <option value="Worker Placement" />
+        </datalist>
+      </div>
+
+      <div class="form-section">
+        <label class="form-label">Rules URL <span style="color:var(--border-hi);font-size:0.85em">(optional)</span></label>
+        <input type="url" class="form-input" id="ag-rules" placeholder="https://…" />
+      </div>
+
+      <button class="log-submit-btn" id="ag-submit">Add Game</button>
+      <div class="log-feedback" id="ag-feedback"></div>
     </div>
   </div>
 </div>
@@ -1524,7 +1634,12 @@ const playerBackdrop = document.getElementById("player-modal-backdrop");
 document.getElementById("player-modal-close").addEventListener("click", () => playerBackdrop.classList.remove("open"));
 playerBackdrop.addEventListener("click", e => { if (e.target === playerBackdrop) playerBackdrop.classList.remove("open"); });
 document.addEventListener("keydown", e => {
-  if (e.key === "Escape") { backdrop.classList.remove("open"); playerBackdrop.classList.remove("open"); logBackdrop.classList.remove("open"); }
+  if (e.key === "Escape") {
+    backdrop.classList.remove("open");
+    playerBackdrop.classList.remove("open");
+    logBackdrop.classList.remove("open");
+    agBackdrop.classList.remove("open");
+  }
 });
 
 // ── Session list → open game modal ───────────────────────────
@@ -1544,6 +1659,72 @@ document.querySelectorAll(".filter-btn").forEach(btn => {
     renderCatalog(count);
   });
 });
+
+// ── Add Game Modal ────────────────────────────────────────────
+function openAddGameModal() {
+  ['ag-name','ag-min','ag-max','ag-exp-min','ag-exp-max','ag-genre','ag-rules'].forEach(id => {
+    document.getElementById(id).value = '';
+  });
+  document.getElementById('ag-feedback').textContent = '';
+  document.getElementById('ag-owners').innerHTML =
+    PLAYERS.map(p => `<button class="chip" data-owner="${p}">${p}</button>`).join('');
+  const btn = document.getElementById('ag-submit');
+  btn.disabled = false;
+  btn.textContent = 'Add Game';
+  document.getElementById('add-game-modal-backdrop').classList.add('open');
+}
+
+async function submitNewGame() {
+  const name   = document.getElementById('ag-name').value.trim();
+  const min    = document.getElementById('ag-min').value;
+  const max    = document.getElementById('ag-max').value;
+  const expMin = document.getElementById('ag-exp-min').value;
+  const expMax = document.getElementById('ag-exp-max').value;
+  const genre  = document.getElementById('ag-genre').value.trim();
+  const rules  = document.getElementById('ag-rules').value.trim();
+  const owners = [...document.querySelectorAll('#ag-owners .chip.active')].map(c => c.dataset.owner).join(', ');
+
+  if (!name)       { agFeedback('Please enter a game name.', 'err'); return; }
+  if (!min || !max) { agFeedback('Please enter min and max players.', 'err'); return; }
+
+  const params = new URLSearchParams({ action: 'addGame', name, min, max });
+  if (expMin) params.set('expMin', expMin);
+  if (expMax) params.set('expMax', expMax);
+  if (owners) params.set('owners', owners);
+  if (genre)  params.set('genre', genre);
+  if (rules)  params.set('rulesUrl', rules);
+
+  const btn = document.getElementById('ag-submit');
+  btn.disabled = true;
+  btn.textContent = 'Adding…';
+
+  try {
+    await fetch(`${API_URL}?${params.toString()}`);
+    agFeedback('✅ Game added!', 'ok');
+    btn.textContent = 'Added!';
+    setTimeout(init, 1200);
+  } catch (err) {
+    agFeedback('⚠ Could not submit — check your connection.', 'err');
+    btn.disabled = false;
+    btn.textContent = 'Add Game';
+  }
+}
+
+function agFeedback(msg, type) {
+  const el = document.getElementById('ag-feedback');
+  el.textContent = msg;
+  el.style.color = type === 'err' ? 'var(--red)' : 'var(--accent-bright)';
+}
+
+document.getElementById('ag-owners').addEventListener('click', e => {
+  const chip = e.target.closest('.chip');
+  if (!chip) return;
+  chip.classList.toggle('active');
+});
+document.getElementById('ag-submit').addEventListener('click', submitNewGame);
+const agBackdrop = document.getElementById('add-game-modal-backdrop');
+document.getElementById('add-game-modal-close').addEventListener('click', () => agBackdrop.classList.remove('open'));
+agBackdrop.addEventListener('click', e => { if (e.target === agBackdrop) agBackdrop.classList.remove('open'); });
 
 // ── Init: cache-first, then refresh from API ──────────────────
 const CACHE_KEY = "bgn_cache";
