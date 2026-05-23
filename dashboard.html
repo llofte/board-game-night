@@ -704,6 +704,33 @@
     .placing-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
     .placing-sub { font-size: 0.7rem; color: var(--text-muted); font-family: 'Courier New', monospace; margin-bottom: 6px; }
 
+    .add-player-row {
+      display: flex;
+      gap: 8px;
+      margin-top: 10px;
+    }
+    .add-player-row .form-input {
+      flex: 1;
+      width: auto;
+      padding: 9px 12px;
+    }
+    .add-player-btn {
+      background: var(--surface2);
+      border: 1px solid var(--border-hi);
+      color: var(--accent-bright);
+      font-family: 'Courier New', monospace;
+      font-size: 0.78rem;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      padding: 9px 16px;
+      border-radius: 2px;
+      cursor: pointer;
+      white-space: nowrap;
+      transition: background 0.15s, border-color 0.15s;
+      -webkit-tap-highlight-color: transparent;
+    }
+    .add-player-btn:hover { background: rgba(192,122,56,0.1); border-color: var(--accent-dim); }
+
     .log-submit-btn {
       width: 100%;
       background: var(--accent);
@@ -836,6 +863,10 @@
       <div class="form-section">
         <label class="form-label">Players</label>
         <div class="chip-group" id="log-players"></div>
+        <div class="add-player-row">
+          <input type="text" class="form-input" id="log-new-player" placeholder="Add another player…" autocomplete="off" />
+          <button type="button" class="add-player-btn" id="log-add-player-btn">Add</button>
+        </div>
       </div>
 
       <div class="form-section">
@@ -1031,7 +1062,7 @@ function renderCatalog(filterCount) {
     const plays = _gameCounts[game.name] || 0;
     const { min: effectiveMin, max: effectiveMax } = effectiveRange(game);
     const visible = filterCount === "all" || (effectiveMin <= filterCount && effectiveMax >= filterCount);
-    const playerStr = effectiveMin === effectiveMax ? `${effectiveMin}` : `${effectiveMin}–${effectiveMax} players`;
+    const playerStr = effectiveMin === effectiveMax ? `${effectiveMin}` : `${effectiveMin}–${effectiveMax}`;
     const expBadge = hasOwnedExpansion(game.name) ? `<span class="exp-badge">+exp</span>` : "";
     const card = document.createElement("div");
     card.className = `game-card${visible ? "" : " hidden"}`;
@@ -1039,7 +1070,7 @@ function renderCatalog(filterCount) {
       <div class="game-card-name">${game.name}</div>
       <div class="game-card-meta">
         <span class="game-card-players">${playerStr} ${expBadge}</span>
-        <span class="game-card-plays">${plays > 0 ? `played ${plays}×` : "not yet played"}</span>
+        <span class="game-card-plays">${plays > 0 ? `${plays}×` : "—"}</span>
       </div>`;
     card.addEventListener("click", () => openGameModal(game));
     catalogGrid.appendChild(card);
@@ -1326,6 +1357,7 @@ function openLogModal() {
   // Player chips
   document.getElementById('log-players').innerHTML = PLAYERS.map(p =>
     `<button class="chip" data-player="${p}">${p}</button>`).join('');
+  document.getElementById('log-new-player').value = '';
 
   // Reset result chips
   document.querySelectorAll('#log-result-chips .chip').forEach(c => c.classList.remove('active'));
@@ -1419,6 +1451,37 @@ function logFeedback(msg, type) {
   el.textContent = msg;
   el.style.color = type === 'err' ? 'var(--red)' : 'var(--accent-bright)';
 }
+
+// Add custom player
+function addCustomPlayer() {
+  const input = document.getElementById('log-new-player');
+  const name = input.value.trim();
+  if (!name) return;
+
+  // If already in the list, just activate their chip
+  const existing = document.querySelector(`#log-players .chip[data-player="${name}"]`);
+  if (existing) {
+    existing.classList.add('active');
+    input.value = '';
+    updatePlacingDropdowns();
+    return;
+  }
+
+  // Create and append a new active chip
+  const chip = document.createElement('button');
+  chip.className = 'chip active';
+  chip.dataset.player = name;
+  chip.textContent = name;
+  document.getElementById('log-players').appendChild(chip);
+
+  input.value = '';
+  updatePlacingDropdowns();
+}
+
+document.getElementById('log-add-player-btn').addEventListener('click', addCustomPlayer);
+document.getElementById('log-new-player').addEventListener('keydown', e => {
+  if (e.key === 'Enter') { e.preventDefault(); addCustomPlayer(); }
+});
 
 // Player chip clicks
 document.getElementById('log-players').addEventListener('click', e => {
