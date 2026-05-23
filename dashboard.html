@@ -1009,28 +1009,6 @@
         <div class="chip-group" id="ag-owners"></div>
       </div>
 
-      <div class="form-section">
-        <label class="form-label">Genre <span style="color:var(--border-hi);font-size:0.85em">(optional)</span></label>
-        <input type="text" class="form-input" id="ag-genre" placeholder="e.g. Engine Building" autocomplete="off" list="ag-genre-list" />
-        <datalist id="ag-genre-list">
-          <option value="Adventure" />
-          <option value="Civilization" />
-          <option value="Cooperative" />
-          <option value="Deck Building" />
-          <option value="Engine Building" />
-          <option value="Resource Management" />
-          <option value="Route Building" />
-          <option value="Social Deduction" />
-          <option value="Space Strategy" />
-          <option value="Worker Placement" />
-        </datalist>
-      </div>
-
-      <div class="form-section">
-        <label class="form-label">Rules URL <span style="color:var(--border-hi);font-size:0.85em">(optional)</span></label>
-        <input type="url" class="form-input" id="ag-rules" placeholder="https://…" />
-      </div>
-
       <button class="log-submit-btn" id="ag-submit">Add Game</button>
       <div class="log-feedback" id="ag-feedback"></div>
     </div>
@@ -1662,7 +1640,7 @@ document.querySelectorAll(".filter-btn").forEach(btn => {
 
 // ── Add Game Modal ────────────────────────────────────────────
 function openAddGameModal() {
-  ['ag-name','ag-min','ag-max','ag-exp-min','ag-exp-max','ag-genre','ag-rules'].forEach(id => {
+  ['ag-name','ag-min','ag-max','ag-exp-min','ag-exp-max'].forEach(id => {
     document.getElementById(id).value = '';
   });
   document.getElementById('ag-feedback').textContent = '';
@@ -1680,19 +1658,15 @@ async function submitNewGame() {
   const max    = document.getElementById('ag-max').value;
   const expMin = document.getElementById('ag-exp-min').value;
   const expMax = document.getElementById('ag-exp-max').value;
-  const genre  = document.getElementById('ag-genre').value.trim();
-  const rules  = document.getElementById('ag-rules').value.trim();
   const owners = [...document.querySelectorAll('#ag-owners .chip.active')].map(c => c.dataset.owner).join(', ');
 
-  if (!name)       { agFeedback('Please enter a game name.', 'err'); return; }
+  if (!name)        { agFeedback('Please enter a game name.', 'err'); return; }
   if (!min || !max) { agFeedback('Please enter min and max players.', 'err'); return; }
 
   const params = new URLSearchParams({ action: 'addGame', name, min, max });
   if (expMin) params.set('expMin', expMin);
   if (expMax) params.set('expMax', expMax);
   if (owners) params.set('owners', owners);
-  if (genre)  params.set('genre', genre);
-  if (rules)  params.set('rulesUrl', rules);
 
   const btn = document.getElementById('ag-submit');
   btn.disabled = true;
