@@ -171,6 +171,23 @@
     }
     .pts-col { color: var(--accent-bright); font-weight: bold; }
     .firsts-col { color: var(--copper-hi); }
+    .pts-legend {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 4px 12px;
+      margin-top: 12px;
+      padding-top: 10px;
+      border-top: 1px solid var(--border);
+      font-size: 0.68rem;
+      font-family: 'Courier New', monospace;
+      color: var(--text-muted);
+      letter-spacing: 0.06em;
+    }
+    .pts-legend-title {
+      color: var(--accent);
+      margin-right: 2px;
+    }
     .player-link {
       cursor: pointer;
       transition: color 0.15s;
@@ -575,6 +592,9 @@
       .game-card-players { font-size: 0.8rem; }
       .game-card-plays { font-size: 0.76rem; }
 
+      /* Points legend */
+      .pts-legend { font-size: 0.74rem; }
+
       /* Log Session button in header */
       .log-session-btn { font-size: 0.8rem; padding: 7px 12px; }
 
@@ -715,7 +735,7 @@
 <body>
 
 <header>
-  <h1>🎲 Board Game Night</h1>
+  <h1>Board Game Night</h1>
   <span id="data-status">loading...</span>
   <button class="log-session-btn" onclick="openLogModal()">+ Log Session</button>
 </header>
@@ -738,6 +758,13 @@
         </thead>
         <tbody id="leaderboard-body"></tbody>
       </table>
+      <div class="pts-legend">
+        <span class="pts-legend-title">Points</span>
+        <span>played +1</span>
+        <span>· 🥇 +3</span>
+        <span>· 🥈 +2</span>
+        <span>· 🥉 +1</span>
+      </div>
     </div>
 
     <div class="panel">
@@ -1011,10 +1038,10 @@ function renderDashboard(gamesLibrary, playLog) {
     session.players.forEach(p => {
       if (!_playerStats[p]) _playerStats[p] = { sessions: 0, pts: 0, firsts: 0, seconds: 0, thirds: 0 };
       _playerStats[p].sessions++;
+      _playerStats[p].pts += 1; // participation point
     });
-    if (session.places[0] === COOP_WIN) {
-      session.players.forEach(p => { if (_playerStats[p]) _playerStats[p].pts += 2; });
-    } else if (session.places[0] !== COOP_LOSS && session.places[0] !== DNF) {
+    // Podium bonus points (competitive games only)
+    if (session.places[0] !== COOP_WIN && session.places[0] !== COOP_LOSS && session.places[0] !== DNF) {
       session.places.forEach((p, i) => {
         if (!_playerStats[p]) return;
         _playerStats[p].pts += PLACE_PTS[i] ?? 0;
