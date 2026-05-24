@@ -364,6 +364,57 @@ function batchAddNewGames() {
   Logger.log('✅ Added ' + games.length + ' games to the library (sorted alphabetically).');
 }
 
+// ── Remove duplicate games, keeping the most complete row ─────
+function removeDuplicateGames() {
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  let sheet = ss.getSheetByName('🎲 Games Library');
+  if (!sheet) sheet = ss.getSheetByName('Games Library');
+  if (!sheet) { Logger.log('❌ Games Library sheet not found.'); return; }
+
+  const lastRow = sheet.getLastRow();
+  if (lastRow < 4) { Logger.log('✅ Nothing to deduplicate.'); return; }
+
+  // Rows 1 = title, 2 = headers, 3+ = data
+  const data = sheet.getRange(3, 1, lastRow - 2, 8).getValues();
+
+  // For each game name, track the best row index (most fields filled)
+  const seen   = {}; // normalised name → index in data[]
+  const remove = []; // indices in data[] to delete
+
+  for (let i = 0; i < data.length; i++) {
+    const name = String(data[i][0]).trim();
+    if (!name) continue;
+    const key = name.toLowerCase();
+
+    if (!(key in seen)) {
+      seen[key] = i;
+    } else {
+      const existingScore = data[seen[key]].filter(c => c !== '' && c !== null).length;
+      const newScore      = data[i].filter(c => c !== '' && c !== null).length;
+      if (newScore > existingScore) {
+        remove.push(seen[key]); // replace existing with better new row
+        seen[key] = i;
+      } else {
+        remove.push(i); // existing is fine, drop the new one
+      }
+    }
+  }
+
+  if (remove.length === 0) {
+    Logger.log('✅ No duplicates found.');
+    return;
+  }
+
+  // Delete from bottom to top so row numbers don't shift
+  remove.sort((a, b) => b - a);
+  for (const idx of remove) {
+    sheet.deleteRow(idx + 3); // +3 because data starts at sheet row 3
+  }
+
+  sortGamesLibrary(ss);
+  Logger.log('✅ Removed ' + remove.length + ' duplicate(s). Library re-sorted.');
+}
+
 // ── Sort the Games Library alphabetically by game name ────────
 function sortGamesLibrary(ss) {
   if (!ss) ss = SpreadsheetApp.getActiveSpreadsheet();
