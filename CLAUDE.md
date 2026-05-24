@@ -22,7 +22,13 @@ A board game group tracker. The user tells Claude about each game night in plain
 | Team Log | tbl5Yi01dkX7DdiX8 | Date |
 
 ### Games Library fields
-Game Name | Min Players | Max Players | Expansion Min | Expansion Max | Owners | Genre | Rules URL
+Game Name | Min Players | Max Players | Expansion Counts | Owners | Genre | Rules URL
+
+Expansion Counts: text field, e.g. "2-6" or "1-4, 6" — parsed by dashboard to handle all 4 cases:
+1. Only max extends: "2-6" (base 2-4)
+2. Only min changes: "1-5" (base 2-5)
+3. Both change: "1-6" (base 2-4)
+4. Non-contiguous: "1-4, 6" (base 1-4, expansion adds exactly 6)
 
 ### Play Log fields
 Date | Game | Players (comma-separated) | 1st Place | 2nd Place | 3rd Place | Duration (mins) | Notes

@@ -1068,16 +1068,7 @@
 
       <div class="form-section">
         <label class="form-label">With expansion <span style="color:var(--border-hi);font-size:0.85em">(optional — only if expansion changes player count)</span></label>
-        <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
-          <div>
-            <div class="placing-sub" style="margin-bottom:6px">Min</div>
-            <input type="number" class="form-input" id="ag-exp-min" min="1" max="20" placeholder="—" />
-          </div>
-          <div>
-            <div class="placing-sub" style="margin-bottom:6px">Max</div>
-            <input type="number" class="form-input" id="ag-exp-max" min="1" max="20" placeholder="—" />
-          </div>
-        </div>
+        <input type="text" class="form-input" id="ag-exp-counts" placeholder="e.g. 2-6 or 1-4, 6" autocomplete="off" />
       </div>
 
       <div class="form-section">
@@ -1140,14 +1131,13 @@ async function atCreate(table, fields) {
 function parseGame(r) {
   const f = r.fields;
   return {
-    name:         f["Game Name"]     || "",
-    min:          f["Min Players"]   ?? null,
-    max:          f["Max Players"]   ?? null,
-    expansionMin: f["Expansion Min"] ?? null,
-    expansionMax: f["Expansion Max"] ?? null,
-    owners:       f["Owners"] ? f["Owners"].split(",").map(s => s.trim()) : [],
-    genre:        f["Genre"]    || null,
-    rulesUrl:     f["Rules URL"] || null
+    name:            f["Game Name"]       || "",
+    min:             f["Min Players"]     ?? null,
+    max:             f["Max Players"]     ?? null,
+    expansionCounts: parseExpansionCounts(f["Expansion Counts"] || ""),
+    owners:          f["Owners"] ? f["Owners"].split(",").map(s => s.trim()) : [],
+    genre:           f["Genre"]    || null,
+    rulesUrl:        f["Rules URL"] || null
   };
 }
 function parseSession(r) {
@@ -1245,22 +1235,46 @@ function hasOwnedExpansion(gameName) {
   return exps ? exps.some(e => e.owned) : false;
 }
 
-// ── Extra player counts for games with non-contiguous ranges ──
-// Used when an expansion adds a specific count that doesn't fit a min–max range
-const GAME_EXTRA_COUNTS = {
-  "Dune: Imperium": [6]
-};
-function gameExtraCounts(game) {
-  if (!hasOwnedExpansion(game.name)) return [];
-  return GAME_EXTRA_COUNTS[game.name] || [];
+// ── Parses "1-4, 6" → [1,2,3,4,6]; "2-6" → [2,3,4,5,6] ──────
+function parseExpansionCounts(str) {
+  if (!str) return [];
+  const counts = new Set();
+  str.split(",").forEach(part => {
+    part = part.trim();
+    const range = part.match(/^(\d+)-(\d+)$/);
+    if (range) {
+      for (let i = +range[1]; i <= +range[2]; i++) counts.add(i);
+    } else {
+      const n = parseInt(part);
+      if (!isNaN(n)) counts.add(n);
+    }
+  });
+  return [...counts].sort((a, b) => a - b);
 }
 
-// ── Effective player range accounting for owned expansions only
-function effectiveRange(game) {
-  if (hasOwnedExpansion(game.name) && game.expansionMax) {
-    return { min: game.expansionMin ?? game.min, max: game.expansionMax };
+// ── Formats [1,2,3,4,6] → "1–4, 6" ──────────────────────────
+function formatCountsDisplay(counts) {
+  if (!counts.length) return "";
+  const ranges = [];
+  let start = counts[0], end = counts[0];
+  for (let i = 1; i < counts.length; i++) {
+    if (counts[i] === end + 1) { end = counts[i]; }
+    else { ranges.push(start === end ? `${start}` : `${start}–${end}`); start = end = counts[i]; }
   }
-  return { min: game.min, max: game.max };
+  ranges.push(start === end ? `${start}` : `${start}–${end}`);
+  return ranges.join(", ");
+}
+
+// ── Valid player counts accounting for owned expansions ───────
+function effectiveCounts(game) {
+  if (hasOwnedExpansion(game.name) && game.expansionCounts.length > 0) {
+    return game.expansionCounts;
+  }
+  const counts = [];
+  if (game.min != null && game.max != null) {
+    for (let i = game.min; i <= game.max; i++) counts.push(i);
+  }
+  return counts;
 }
 
 // ── Catalog render (uses module state) ────────────────────────
@@ -1269,14 +1283,9 @@ function renderCatalog(filterCount) {
   catalogGrid.innerHTML = "";
   _gamesLibrary.forEach(game => {
     const plays = _gameCounts[game.name] || 0;
-    const { min: effectiveMin, max: effectiveMax } = effectiveRange(game);
-    const extra = gameExtraCounts(game);
-    const visible = filterCount === "all"
-      || (effectiveMin <= filterCount && effectiveMax >= filterCount)
-      || extra.includes(filterCount);
-    const playerStr = extra.length > 0
-      ? `${effectiveMin}–${effectiveMax}, ${extra.join(', ')}`
-      : effectiveMin === effectiveMax ? `${effectiveMin}` : `${effectiveMin}–${effectiveMax}`;
+    const counts = effectiveCounts(game);
+    const visible = filterCount === "all" || counts.includes(filterCount);
+    const playerStr = formatCountsDisplay(counts);
     const expBadge = hasOwnedExpansion(game.name) ? `<span class="exp-badge">+exp</span>` : "";
     const card = document.createElement("div");
     card.className = `game-card${visible ? "" : " hidden"}`;
@@ -1494,13 +1503,8 @@ function openGameModal(game) {
     .map(([n, d]) => ({ players: n, avg: Math.round(d.total / d.count) }));
 
   document.getElementById("modal-title").textContent = game.name;
-  const extraCounts = gameExtraCounts(game);
-  let expStr = "";
-  if (extraCounts.length > 0) {
-    expStr = `  ·  ${game.min}–${game.max}, ${extraCounts.join(', ')} w/ expansions`;
-  } else if (game.expansionMax && game.expansionMax !== game.max) {
-    expStr = `  ·  ${game.expansionMin ?? game.min}–${game.expansionMax} w/ expansions`;
-  }
+  const expStr = game.expansionCounts.length > 0
+    ? `  ·  ${formatCountsDisplay(game.expansionCounts)} w/ expansions` : "";
   document.getElementById("modal-subtitle").textContent = `${game.min}–${game.max} players${expStr}`;
   const genreEl = document.getElementById("modal-genre");
   genreEl.textContent = game.genre ?? "";
@@ -1944,7 +1948,7 @@ document.querySelectorAll(".filter-btn").forEach(btn => {
 
 // ── Add Game Modal ────────────────────────────────────────────
 function openAddGameModal() {
-  ['ag-name','ag-min','ag-max','ag-exp-min','ag-exp-max'].forEach(id => {
+  ['ag-name','ag-min','ag-max','ag-exp-counts'].forEach(id => {
     document.getElementById(id).value = '';
   });
   document.getElementById('ag-feedback').textContent = '';
@@ -1957,20 +1961,18 @@ function openAddGameModal() {
 }
 
 async function submitNewGame() {
-  const name   = document.getElementById('ag-name').value.trim();
-  const min    = document.getElementById('ag-min').value;
-  const max    = document.getElementById('ag-max').value;
-  const expMin = document.getElementById('ag-exp-min').value;
-  const expMax = document.getElementById('ag-exp-max').value;
-  const owners = [...document.querySelectorAll('#ag-owners .chip.active')].map(c => c.dataset.owner).join(', ');
+  const name      = document.getElementById('ag-name').value.trim();
+  const min       = document.getElementById('ag-min').value;
+  const max       = document.getElementById('ag-max').value;
+  const expCounts = document.getElementById('ag-exp-counts').value.trim();
+  const owners    = [...document.querySelectorAll('#ag-owners .chip.active')].map(c => c.dataset.owner).join(', ');
 
   if (!name)        { agFeedback('Please enter a game name.', 'err'); return; }
   if (!min || !max) { agFeedback('Please enter min and max players.', 'err'); return; }
 
   const fields = { 'Game Name': name, 'Min Players': Number(min), 'Max Players': Number(max) };
-  if (expMin) fields['Expansion Min'] = Number(expMin);
-  if (expMax) fields['Expansion Max'] = Number(expMax);
-  if (owners) fields['Owners'] = owners;
+  if (expCounts) fields['Expansion Counts'] = expCounts;
+  if (owners)    fields['Owners'] = owners;
 
   const btn = document.getElementById('ag-submit');
   btn.disabled = true;
