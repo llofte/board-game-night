@@ -342,7 +342,7 @@
     }
     .game-card-name { font-size: 0.96rem; color: var(--text); margin-bottom: 8px; line-height: 1.3; }
     .game-card-meta { display: flex; justify-content: space-between; align-items: center; }
-    .game-card-players { font-size: 0.82rem; color: var(--accent); font-family: 'Courier New', monospace; }
+    .game-card-players { font-size: 0.82rem; color: var(--accent); font-family: 'Courier New', monospace; font-weight: bold; }
     .game-card-plays { font-size: 0.8rem; color: var(--text-muted); font-family: 'Courier New', monospace; }
     .exp-badge {
       font-size: 0.6rem;
@@ -1479,7 +1479,7 @@ function renderDashboard(gamesLibrary, playLog, expansions, teamSessions) {
       sessionList.innerHTML += `
         <div class="session" data-game="${s.game}">
           <div class="session-top">
-            <span class="session-game">${s.game} <span class="team-tag">Teams</span></span>
+            <span class="session-game">${s.game}</span>
             <span class="session-date">${fmtDate(s.date)}</span>
           </div>
           <div class="session-teams">
