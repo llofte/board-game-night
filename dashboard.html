@@ -2002,7 +2002,7 @@ function openLogModal(session = null, sessionType = null) {
   document.querySelector(`#log-type-chips .chip[data-type="${type}"]`).classList.add('active');
   toggleSessionType(type);
 
-  if (type === 'team') {
+  if (type === 'teams') {
     // Team chips — pre-select if editing
     document.getElementById('log-team1').innerHTML = PLAYERS.map(p =>
       `<button class="chip${isEdit && session.team1.includes(p) ? ' active' : ''}" data-player="${p}">${p}</button>`).join('');
