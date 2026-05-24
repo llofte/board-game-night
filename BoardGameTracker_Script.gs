@@ -133,6 +133,11 @@ function doGet(e) {
     return logSession(e.parameter);
   }
 
+  // ── Log a team session ──
+  if (e.parameter.action === 'logTeam') {
+    return logTeamSession(e.parameter);
+  }
+
   // ── Add a new game to the Games Library ──
   if (e.parameter.action === 'addGame') {
     return addGame(e.parameter);
@@ -141,9 +146,10 @@ function doGet(e) {
   // ── Default: return JSON data for the dashboard ──
   const ss = SpreadsheetApp.getActiveSpreadsheet();
   const output = {
-    games:      getGames(ss),
-    sessions:   getSessions(ss),
-    expansions: getExpansions(ss)
+    games:        getGames(ss),
+    sessions:     getSessions(ss),
+    expansions:   getExpansions(ss),
+    teamSessions: getTeamSessions(ss)
   };
   return ContentService
     .createTextOutput(JSON.stringify(output))
@@ -567,4 +573,116 @@ function fixDuneImperiumData() {
       }
     }
   }
+}
+
+// ── Run once to add Uprising expansion and ensure Codenames is in library ─
+function addTeamGameData() {
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+
+  // 1. Add Dune: Imperium — Uprising to Expansions (skip if already there)
+  const expSheet = ss.getSheetByName('🎲 Expansions');
+  if (expSheet) {
+    const expData = expSheet.getDataRange().getValues();
+    const hasUprising = expData.some(r => r[0] === 'Dune: Imperium' && r[1] === 'Uprising');
+    if (!hasUprising) {
+      expSheet.getRange(expSheet.getLastRow() + 1, 1, 1, 4).setValues([['Dune: Imperium', 'Uprising', true, 'Peter']]);
+      Logger.log('✅ Added Dune: Imperium - Uprising (owned, Peter).');
+    } else {
+      Logger.log('Uprising already exists, skipping.');
+    }
+  }
+
+  // 2. Ensure Codenames is in the Games Library with correct data
+  let gamesSheet = ss.getSheetByName('🎲 Games Library');
+  if (!gamesSheet) gamesSheet = ss.getSheetByName('Games Library');
+  if (gamesSheet) {
+    const data = gamesSheet.getDataRange().getValues();
+    let codenamesRow = -1;
+    for (let i = 0; i < data.length; i++) {
+      if (String(data[i][0]).trim().toLowerCase() === 'codenames') { codenamesRow = i; break; }
+    }
+    if (codenamesRow === -1) {
+      // Not found — append it
+      const nextRow = gamesSheet.getLastRow() + 1;
+      gamesSheet.getRange(nextRow, 1, 1, 8).setValues([['Codenames', 2, 8, '', '', 'Dave, Leanna', 'Party', '']]);
+      Logger.log('✅ Added Codenames to Games Library.');
+    } else {
+      // Found — make sure player count is correct
+      gamesSheet.getRange(codenamesRow + 1, 2, 1, 2).setValues([[2, 8]]);
+      Logger.log('✅ Codenames found in row ' + (codenamesRow + 1) + ', player count confirmed.');
+    }
+    sortGamesLibrary(ss);
+  }
+}
+
+// ── Set up Team Log sheet ─────────────────────────────────────
+function setupTeamLog() {
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  let sheet = ss.getSheetByName('🤝 Team Log');
+  if (sheet) { Logger.log('Team Log sheet already exists.'); return; }
+  sheet = ss.insertSheet('🤝 Team Log');
+  sheet.getRange('A1:I1').setValues([[
+    'Date', 'Game', 'Team 1', 'Team 2',
+    'T1 Score', 'T2 Score', 'Winner', 'Duration (min)', 'Notes'
+  ]]);
+  Logger.log('✅ Team Log sheet created.');
+}
+
+// ── Read team sessions for the dashboard API ──────────────────
+function getTeamSessions(ss) {
+  let sheet = ss.getSheetByName('🤝 Team Log');
+  if (!sheet) return [];
+  const data = sheet.getDataRange().getValues();
+  if (data.length < 2) return [];
+  const sessions = [];
+  for (let i = 1; i < data.length; i++) {
+    const row = data[i];
+    if (!row[0] || !row[1]) continue;
+    let dateStr = '';
+    const dateVal = row[0];
+    if (dateVal instanceof Date) {
+      dateStr = Utilities.formatDate(dateVal, 'UTC', 'yyyy-MM-dd');
+    } else {
+      dateStr = String(dateVal);
+    }
+    sessions.push({
+      date:       dateStr,
+      game:       String(row[1]),
+      team1:      String(row[2]).split(',').map(s => s.trim()).filter(Boolean),
+      team2:      String(row[3]).split(',').map(s => s.trim()).filter(Boolean),
+      team1score: (row[4] !== '' && row[4] !== null) ? Number(row[4]) : null,
+      team2score: (row[5] !== '' && row[5] !== null) ? Number(row[5]) : null,
+      winner:     String(row[6]).toLowerCase().replace(/\s/g, ''), // 'team1' or 'team2'
+      duration:   row[7] !== '' ? Number(row[7]) : null,
+      notes:      row[8] || null
+    });
+  }
+  return sessions;
+}
+
+// ── Log a team session (called via ?action=logTeam) ───────────
+function logTeamSession(p) {
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  let sheet = ss.getSheetByName('🤝 Team Log');
+  if (!sheet) {
+    return ContentService
+      .createTextOutput('❌ Team Log sheet not found. Run setupTeamLog() first.')
+      .setMimeType(ContentService.MimeType.TEXT);
+  }
+  const date       = p.date || Utilities.formatDate(new Date(), 'UTC', 'yyyy-MM-dd');
+  const game       = p.game   || '';
+  const team1      = p.team1  || '';  // comma-separated names
+  const team2      = p.team2  || '';
+  const team1score = p.t1score || '';
+  const team2score = p.t2score || '';
+  const winner     = p.winner  || '';  // 'Team 1' or 'Team 2'
+  const duration   = p.duration ? Number(p.duration) : '';
+  const notes      = p.notes   || '';
+
+  sheet.appendRow([date, game, team1, team2, team1score, team2score, winner, duration, notes]);
+
+  const scoreStr = (team1score && team2score) ? ` · ${team1score}–${team2score}` : '';
+  return ContentService
+    .createTextOutput(`✅ Team session logged!\n\n${game} · ${date}${scoreStr}\n${team1} vs ${team2}\n${winner} wins`)
+    .setMimeType(ContentService.MimeType.TEXT);
 }

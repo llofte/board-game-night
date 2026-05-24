@@ -536,6 +536,51 @@
     .exp-unowned { color: var(--border-hi); }
     .exp-owner   { font-size: 0.68rem; color: var(--text-muted); margin-left: 2px; }
 
+    /* ── Team sessions ── */
+    .team-tag {
+      display: inline-block;
+      font-size: 0.58rem;
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+      color: var(--accent-dim);
+      border: 1px solid var(--accent-dim);
+      border-radius: 2px;
+      padding: 0 4px;
+      margin-right: 6px;
+      vertical-align: middle;
+      line-height: 1.6;
+    }
+    .session-teams {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin-top: 4px;
+      flex-wrap: wrap;
+    }
+    .team-label {
+      font-size: 0.8rem;
+      color: var(--text-muted);
+      padding: 1px 8px;
+      border: 1px solid var(--border);
+      border-radius: 3px;
+    }
+    .team-label.winner {
+      color: var(--accent-bright);
+      border-color: var(--accent-dim);
+    }
+    .team-vs {
+      font-size: 0.65rem;
+      color: var(--text-muted);
+      font-family: 'Courier New', monospace;
+      letter-spacing: 0.12em;
+    }
+    .session-score {
+      font-family: 'Courier New', monospace;
+      font-size: 0.75rem;
+      color: var(--text-muted);
+      margin-top: 3px;
+    }
+
     /* ── Group size avg row ── */
     .group-avg-row {
       display: flex;
@@ -834,6 +879,21 @@
     <div class="session-list" id="session-list"></div>
   </div>
 
+  <div class="panel" id="team-wins-panel" style="display:none">
+    <div class="section-title">Team Wins</div>
+    <table>
+      <thead>
+        <tr>
+          <th>Player</th>
+          <th style="width:70px">Played</th>
+          <th style="width:60px">Won</th>
+          <th style="width:60px">Win %</th>
+        </tr>
+      </thead>
+      <tbody id="team-wins-body"></tbody>
+    </table>
+  </div>
+
   <div class="panel">
     <div class="section-header">
       <div class="section-title">Games Library</div>
@@ -1053,6 +1113,8 @@ let _playerStats  = {};
 let _leaderboard  = [];
 let _gameCounts   = {};
 let _chart        = null;
+let _teamSessions = [];
+let _teamWins     = {};   // { playerName: { wins, losses, played } }
 
 // ── Helpers ───────────────────────────────────────────────────
 function fmtDate(d) {
@@ -1128,9 +1190,10 @@ function renderCatalog(filterCount) {
 }
 
 // ── Main render ───────────────────────────────────────────────
-function renderDashboard(gamesLibrary, playLog, expansions) {
+function renderDashboard(gamesLibrary, playLog, expansions, teamSessions) {
   _gamesLibrary = gamesLibrary;
   _playLog      = playLog;
+  _teamSessions = teamSessions || [];
 
   // Build expansions lookup from API data
   _expansions = {};
@@ -1165,6 +1228,35 @@ function renderDashboard(gamesLibrary, playLog, expansions) {
 
   _gameCounts = {};
   playLog.forEach(s => { _gameCounts[s.game] = (_gameCounts[s.game] || 0) + 1; });
+
+  // Team win stats
+  _teamWins = {};
+  _teamSessions.forEach(ts => {
+    const winning = ts.winner === 'team1' ? ts.team1 : ts.winner === 'team2' ? ts.team2 : [];
+    const losing  = ts.winner === 'team1' ? ts.team2 : ts.winner === 'team2' ? ts.team1 : [];
+    [...ts.team1, ...ts.team2].forEach(p => {
+      if (!_teamWins[p]) _teamWins[p] = { wins: 0, losses: 0, played: 0 };
+      _teamWins[p].played++;
+    });
+    winning.forEach(p => { if (_teamWins[p]) _teamWins[p].wins++; });
+    losing.forEach(p => { if (_teamWins[p]) _teamWins[p].losses++; });
+  });
+  const teamPlayers = Object.entries(_teamWins).sort((a, b) => b[1].wins - a[1].wins || b[1].played - a[1].played);
+  const teamWinsPanel = document.getElementById('team-wins-panel');
+  const teamWinsBody  = document.getElementById('team-wins-body');
+  if (teamPlayers.length > 0) {
+    teamWinsPanel.style.display = '';
+    teamWinsBody.innerHTML = teamPlayers.map(([name, s]) => `
+      <tr>
+        <td><span class="player-link" onclick="openPlayerModal('${name}')">${name}</span></td>
+        <td style="text-align:right">${s.played}</td>
+        <td style="text-align:right;color:var(--accent-bright)">${s.wins}</td>
+        <td style="text-align:right;font-family:'Courier New',monospace;font-size:0.82rem">${s.played > 0 ? Math.round(s.wins / s.played * 100) + '%' : '—'}</td>
+      </tr>`).join('');
+  } else {
+    teamWinsPanel.style.display = 'none';
+  }
+
   const sortedGames  = Object.entries(_gameCounts).sort((a, b) => b[1] - a[1]);
   const totalSessions = playLog.length;
   const mostPlayed   = sortedGames[0]?.[0] ?? "—";
@@ -1235,20 +1327,45 @@ function renderDashboard(gamesLibrary, playLog, expansions) {
     }
   });
 
-  // Recent sessions
+  // Recent sessions — merge regular + team, sort by date
   const sessionList = document.getElementById("session-list");
   sessionList.innerHTML = "";
-  playLog.slice(0, 6).forEach(s => {
-    sessionList.innerHTML += `
-      <div class="session" data-game="${s.game}">
-        <div class="session-top">
-          <span class="session-game">${s.game}</span>
-          <span class="session-date">${fmtDate(s.date)}</span>
-        </div>
-        <div class="session-players">${s.players.join(", ")}</div>
-        <div class="session-podium">${buildPodiumHTML(s)}</div>
-        ${s.notes ? `<div class="session-notes">${s.notes}</div>` : ""}
-      </div>`;
+  const allSessions = [
+    ...playLog.map(s => ({ ...s, _type: 'regular' })),
+    ..._teamSessions.map(ts => ({ ...ts, _type: 'team' }))
+  ].sort((a, b) => b.date.localeCompare(a.date));
+
+  allSessions.slice(0, 8).forEach(s => {
+    if (s._type === 'team') {
+      const hasScore = s.team1score !== null && s.team2score !== null;
+      const t1win = s.winner === 'team1';
+      const t2win = s.winner === 'team2';
+      sessionList.innerHTML += `
+        <div class="session" data-game="${s.game}">
+          <div class="session-top">
+            <span class="session-game"><span class="team-tag">Teams</span>${s.game}</span>
+            <span class="session-date">${fmtDate(s.date)}</span>
+          </div>
+          <div class="session-teams">
+            <span class="team-label${t1win ? ' winner' : ''}">${s.team1.join(', ')}</span>
+            <span class="team-vs">vs</span>
+            <span class="team-label${t2win ? ' winner' : ''}">${s.team2.join(', ')}</span>
+          </div>
+          ${hasScore ? `<div class="session-score">${s.team1score} – ${s.team2score}</div>` : ''}
+          ${s.notes ? `<div class="session-notes">${s.notes}</div>` : ''}
+        </div>`;
+    } else {
+      sessionList.innerHTML += `
+        <div class="session" data-game="${s.game}">
+          <div class="session-top">
+            <span class="session-game">${s.game}</span>
+            <span class="session-date">${fmtDate(s.date)}</span>
+          </div>
+          <div class="session-players">${s.players.join(", ")}</div>
+          <div class="session-podium">${buildPodiumHTML(s)}</div>
+          ${s.notes ? `<div class="session-notes">${s.notes}</div>` : ""}
+        </div>`;
+    }
   });
 
   // Catalog + reset filter
@@ -1685,7 +1802,7 @@ async function init() {
       const data = JSON.parse(cached);
       const playLog = [...data.sessions].sort((a, b) => b.date.localeCompare(a.date));
       statusEl.textContent = "updating…";
-      renderDashboard(data.games, playLog, data.expansions || []);
+      renderDashboard(data.games, playLog, data.expansions || [], data.teamSessions || []);
     } catch (_) { /* ignore corrupt cache */ }
   }
 
@@ -1696,7 +1813,7 @@ async function init() {
     const playLog = [...data.sessions].sort((a, b) => b.date.localeCompare(a.date));
     localStorage.setItem(CACHE_KEY, JSON.stringify(data));
     statusEl.textContent = "live data";
-    renderDashboard(data.games, playLog, data.expansions || []);
+    renderDashboard(data.games, playLog, data.expansions || [], data.teamSessions || []);
   } catch (err) {
     console.error("Failed to load data:", err);
     if (cached) {
