@@ -2350,7 +2350,7 @@ function openSessionActionSheet(sessionId, sessionType, gameName) {
   // Header info
   document.getElementById('session-action-game').textContent = gameName;
   let detail = fmtDate(session.date);
-  if (sessionType === 'team') {
+  if (sessionType === 'teams') {
     detail += '\n' + session.team1.join(', ') + ' vs ' + session.team2.join(', ');
   } else {
     detail += '\n' + session.players.join(', ');
