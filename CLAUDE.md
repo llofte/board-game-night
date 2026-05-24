@@ -10,7 +10,7 @@ A board game group tracker. The user tells Claude about each game night in plain
 
 ## Airtable
 - Base ID: `appMG6K6WduzpxNM4`
-- Token: `patHNaPELhhWYyFCk.303ed772bef21348f1daca49c8caa024df09dca0a3f0a9f1ddd5b85b71db272b`
+- Token: stored in dashboard.html (AT_TOKEN constant) — do not log here
 - Base URL: `https://api.airtable.com/v0/appMG6K6WduzpxNM4`
 
 ### Tables
