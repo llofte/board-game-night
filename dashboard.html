@@ -329,28 +329,25 @@
       border-radius: 2px;
       padding: 14px 16px;
       cursor: pointer;
-      position: relative;
       transition: border-color 0.15s, box-shadow 0.15s;
     }
     .game-card:hover {
       border-color: var(--accent-dim);
       box-shadow: 0 0 12px rgba(192,122,56,0.12);
     }
-    .game-card-name { font-size: 0.96rem; color: var(--text); margin-bottom: 8px; line-height: 1.3; padding-right: 22px; }
+    .game-card-header { display: flex; justify-content: space-between; align-items: flex-start; gap: 4px; margin-bottom: 8px; }
+    .game-card-name { font-size: 0.96rem; color: var(--text); line-height: 1.3; }
     .game-fave-btn {
-      position: absolute;
-      top: 2px;
-      right: 2px;
       background: none;
       border: none;
       font-size: 1rem;
       color: var(--border-hi);
       cursor: pointer;
-      padding: 10px;
+      padding: 0 0 0 4px;
       line-height: 1;
+      flex-shrink: 0;
       transition: color 0.15s;
       -webkit-tap-highlight-color: transparent;
-      z-index: 1;
     }
     .game-fave-btn.active { color: var(--accent-bright); }
     .game-fave-btn:hover { color: var(--accent); }
@@ -1055,10 +1052,7 @@
         <div class="modal-subtitle" id="modal-subtitle"></div>
         <div id="modal-links" style="display:flex;gap:6px;margin-top:8px;flex-wrap:wrap"></div>
       </div>
-      <div style="display:flex;gap:6px;flex-shrink:0">
-        <button class="modal-fave-btn" id="modal-fave-btn">★</button>
-        <button class="modal-close" id="modal-close">✕</button>
-      </div>
+      <button class="modal-close" id="modal-close">✕</button>
     </div>
     <div class="modal-stats" id="modal-stats"></div>
     <div class="modal-owners" id="modal-owners"></div>
@@ -1388,6 +1382,7 @@ let _logEditId    = null;   // record ID when editing a session (null = new)
 let _logEditType  = null;   // 'regular' | 'team'
 let _agEditId     = null;   // record ID when editing a game (null = new)
 let _filterCount = 'all';  // player count filter: 'all' | number
+let _pendingFavorites = {};  // { gameId: bool } — survives re-renders until saved
 
 // ── Helpers ───────────────────────────────────────────────────
 function fmtDate(d) {
@@ -1517,35 +1512,59 @@ function renderCatalog() {
     const plays = _gameCounts[game.name] || 0;
     const counts = effectiveCounts(game);
     const playerStr = formatCountsDisplay(counts);
-    const expBadge = hasOwnedExpansion(game.name) ? `<span class="exp-badge">+exp</span>` : "";
+
+    // Build card via createElement so we can attach listeners to real references
     const card = document.createElement("div");
     card.className = "game-card";
-    card.innerHTML = `
-      <button class="game-fave-btn${game.favorite ? ' active' : ''}" onclick="toggleFavorite('${game.id}',event)">★</button>
-      <div class="game-card-name">${game.name}</div>
-      <div class="game-card-meta">
-        <span class="game-card-players">${playerStr} ${expBadge}</span>
-        <span class="game-card-plays">${plays > 0 ? `${plays}×` : "—"}</span>
-      </div>`;
-    card.addEventListener("click", () => openGameModal(game));
+    card.dataset.gameId = game.id;
+
+    const header = document.createElement("div");
+    header.className = "game-card-header";
+
+    const nameDiv = document.createElement("div");
+    nameDiv.className = "game-card-name";
+    nameDiv.textContent = game.name;
+
+    const faveBtn = document.createElement("button");
+    faveBtn.type = "button";
+    faveBtn.className = "game-fave-btn" + (game.favorite ? " active" : "");
+    faveBtn.textContent = "★";
+    faveBtn.addEventListener("click", function(e) {
+      e.stopPropagation();
+      game.favorite = !game.favorite;
+      _pendingFavorites[game.id] = game.favorite;
+      faveBtn.classList[game.favorite ? 'add' : 'remove']('active');
+      atUpdate('Games Library', game.id, { Favorite: game.favorite })
+        .then(() => { delete _pendingFavorites[game.id]; })
+        .catch(() => { /* save failed — visual state stays; _pendingFavorites survives re-renders */ });
+      localStorage.removeItem(CACHE_KEY);
+    });
+
+    header.appendChild(nameDiv);
+    header.appendChild(faveBtn);
+
+    const meta = document.createElement("div");
+    meta.className = "game-card-meta";
+    const expBadge = hasOwnedExpansion(game.name) ? `<span class="exp-badge">+exp</span>` : "";
+    meta.innerHTML = `<span class="game-card-players">${playerStr} ${expBadge}</span><span class="game-card-plays">${plays > 0 ? `${plays}×` : "—"}</span>`;
+
+    card.appendChild(header);
+    card.appendChild(meta);
+
+    card.addEventListener("click", function() {
+      openGameModal(game);
+    });
+
     catalogGrid.appendChild(card);
   });
 }
 
-// ── Toggle favorite ───────────────────────────────────────────
-function toggleFavorite(gameId, e) {
-  e.stopPropagation();
-  const game = _gamesLibrary.find(g => g.id === gameId);
-  if (!game) return;
-  game.favorite = !game.favorite;
-  atUpdate('Games Library', gameId, { Favorite: game.favorite });
-  localStorage.removeItem(CACHE_KEY);
-  renderCatalog();
-}
-
 // ── Main render ───────────────────────────────────────────────
 function renderDashboard(gamesLibrary, playLog, expansions, teamSessions) {
-  _gamesLibrary = gamesLibrary;
+  // Apply any pending star changes so a background re-render doesn't wipe them
+  _gamesLibrary = gamesLibrary.map(g =>
+    g.id in _pendingFavorites ? { ...g, favorite: _pendingFavorites[g.id] } : g
+  );
   _playLog      = playLog;
   _teamSessions = teamSessions || [];
 
@@ -1768,23 +1787,25 @@ function openGameModal(game) {
     .map(([n, d]) => ({ players: n, avg: Math.round(d.total / d.count) }));
 
   document.getElementById("modal-title").textContent = game.name;
-  const modalFaveBtn = document.getElementById("modal-fave-btn");
-  modalFaveBtn.classList.toggle("active", game.favorite);
-  modalFaveBtn.onclick = () => {
-    game.favorite = !game.favorite;
-    modalFaveBtn.classList.toggle("active", game.favorite);
-    atUpdate("Games Library", game.id, { Favorite: game.favorite });
-    localStorage.removeItem(CACHE_KEY);
-    renderCatalog();
-  };
   const expCounts = expansionRange(game);
   const expLine = expCounts.length ? `<br>${formatCountsDisplay(expCounts)} w/ expansion` : "";
   document.getElementById("modal-subtitle").innerHTML = `${game.min}–${game.max} players${expLine}`;
   const bggUrl = game.bggUrl || `https://boardgamegeek.com/search/boardgame?q=${encodeURIComponent(game.name)}`;
+  // Star is first item in links row — rendered fresh each open so toggle is always in sync
   document.getElementById("modal-links").innerHTML =
-    `<a class="modal-rules-btn" href="${bggUrl}" onclick="event.preventDefault();window.open('${bggUrl}','_blank','noopener')">BGG ↗</a>`
+    `<button class="modal-fave-btn${game.favorite ? ' active' : ''}" id="modal-fave-btn">★</button>`
+    + `<a class="modal-rules-btn" href="${bggUrl}" onclick="event.preventDefault();window.open('${bggUrl}','_blank','noopener')">BGG ↗</a>`
     + (game.rulesUrl ? `<a class="modal-rules-btn" href="${game.rulesUrl}" onclick="event.preventDefault();window.open('${game.rulesUrl}','_blank','noopener')">Rules ↗</a>` : '')
     + (game.tutorialUrl ? `<a class="modal-rules-btn" href="${game.tutorialUrl}" onclick="event.preventDefault();window.open('${game.tutorialUrl}','_blank','noopener')">Tutorial ↗</a>` : '');
+  // Wire up after innerHTML so we have a fresh reference
+  const modalFaveBtn = document.getElementById("modal-fave-btn");
+  modalFaveBtn.onclick = () => {
+    game.favorite = !game.favorite;
+    document.getElementById('modal-fave-btn').classList[game.favorite ? 'add' : 'remove']('active');
+    atUpdate("Games Library", game.id, { Favorite: game.favorite });
+    localStorage.removeItem(CACHE_KEY);
+    // Sort updates on next page load
+  };
   const ownersEl = document.getElementById("modal-owners");
   if (game.owners && game.owners.length > 0) {
     ownersEl.style.display = "";
