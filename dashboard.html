@@ -543,16 +543,15 @@
       right: 10px;
       background: none;
       border: 1px solid var(--border);
+      color: var(--text-muted);
       border-radius: 2px;
-      padding: 4px;
+      padding: 5px 6px;
       cursor: pointer;
       line-height: 0;
-      transition: border-color 0.15s, background 0.15s;
+      transition: color 0.15s, border-color 0.15s, background 0.15s;
       -webkit-tap-highlight-color: transparent;
     }
-    .session-edit-btn:hover { border-color: var(--accent); background: rgba(192,122,56,0.08); }
-    .session-edit-btn img { width: 18px; height: 18px; display: block; filter: invert(1); opacity: 0.4; }
-    .session-edit-btn:hover img { opacity: 0.75; }
+    .session-edit-btn:hover { color: var(--accent-bright); border-color: var(--accent); background: rgba(192,122,56,0.08); }
 
     /* ── Team sessions ── */
     .team-tag {
@@ -1664,7 +1663,7 @@ function renderDashboard(gamesLibrary, playLog, expansions, teamSessions) {
           </div>
           ${hasScore ? `<div class="session-score">${s.team1score} – ${s.team2score}</div>` : ''}
           ${s.notes ? `<div class="session-notes">${s.notes}</div>` : ''}
-          <button class="session-edit-btn" data-session-id="${s.id}" data-session-type="teams"><img src="edit.jpeg" alt="edit"></button>
+          <button class="session-edit-btn" data-session-id="${s.id}" data-session-type="teams"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M17 3a2.828 2.828 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5L17 3z"/></svg></button>
         </div>`;
     } else {
       sessionList.innerHTML += `
@@ -1676,7 +1675,7 @@ function renderDashboard(gamesLibrary, playLog, expansions, teamSessions) {
           <div class="session-players">${s.players.join(", ")}</div>
           <div class="session-podium">${buildPodiumHTML(s)}</div>
           ${s.notes ? `<div class="session-notes">${s.notes}</div>` : ""}
-          <button class="session-edit-btn" data-session-id="${s.id}" data-session-type="regular"><img src="edit.jpeg" alt="edit"></button>
+          <button class="session-edit-btn" data-session-id="${s.id}" data-session-type="regular"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M17 3a2.828 2.828 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5L17 3z"/></svg></button>
         </div>`;
     }
   });
