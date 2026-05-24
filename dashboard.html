@@ -1512,8 +1512,8 @@ function openGameModal(game) {
             <td style="font-family:'Courier New',monospace;font-size:0.78rem;color:var(--text-muted);white-space:nowrap">${fmtDate(s.date)}</td>
             <td>
               <span class="team-tag">Teams</span>
-              <div style="font-size:0.8rem;margin-top:3px;color:${t1win ? 'var(--accent-bright)' : 'var(--text-muted)'}">${s.team1.join(', ')}</div>
-              <div style="font-size:0.8rem;color:${t2win ? 'var(--accent-bright)' : 'var(--text-muted)'}">${s.team2.join(', ')}</div>
+              <div style="font-size:0.8rem;margin-top:3px;color:var(--text-muted)">${s.team1.join(', ')}</div>
+              <div style="font-size:0.8rem;color:var(--text-muted)">${s.team2.join(', ')}</div>
             </td>
             <td style="text-align:right;font-family:'Courier New',monospace;font-size:0.78rem;color:var(--text-muted);white-space:nowrap">${fmtDuration(s.duration)}</td>
             <td style="font-size:0.82rem">${t1win ? `🥇 ${s.team1.join(', ')}` : t2win ? `🥇 ${s.team2.join(', ')}` : '—'}</td>
