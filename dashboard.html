@@ -329,14 +329,31 @@
       border-radius: 2px;
       padding: 14px 16px;
       cursor: pointer;
+      position: relative;
       transition: border-color 0.15s, box-shadow 0.15s;
     }
-    .game-card.hidden { display: none; }
     .game-card:hover {
       border-color: var(--accent-dim);
       box-shadow: 0 0 12px rgba(192,122,56,0.12);
     }
-    .game-card-name { font-size: 0.96rem; color: var(--text); margin-bottom: 8px; line-height: 1.3; }
+    .game-card-name { font-size: 0.96rem; color: var(--text); margin-bottom: 8px; line-height: 1.3; padding-right: 22px; }
+    .game-fave-btn {
+      position: absolute;
+      top: 7px;
+      right: 8px;
+      background: none;
+      border: none;
+      font-size: 1rem;
+      color: var(--border-hi);
+      cursor: pointer;
+      padding: 3px;
+      line-height: 1;
+      transition: color 0.15s;
+      -webkit-tap-highlight-color: transparent;
+      z-index: 1;
+    }
+    .game-fave-btn.active { color: var(--accent-bright); }
+    .game-fave-btn:hover { color: var(--accent); }
     .game-card-meta { display: flex; justify-content: space-between; align-items: center; }
     .game-card-players { font-size: 0.9rem; color: var(--accent); font-family: 'Courier New', monospace; font-weight: bold; }
     .game-card-plays { font-size: 0.9rem; color: var(--text-muted); font-family: 'Courier New', monospace; }
@@ -1296,7 +1313,8 @@ function parseGame(r) {
     genre:        f["Genre"]        || null,
     rulesUrl:     f["Rules URL"]   || null,
     bggUrl:       f["BGG URL"]     || null,
-    tutorialUrl:  f["Tutorial URL"]|| null
+    tutorialUrl:  f["Tutorial URL"]|| null,
+    favorite:     f["Favorite"]    === true
   };
 }
 function parseSession(r) {
@@ -1351,6 +1369,7 @@ let _teamSessions = [];
 let _logEditId    = null;   // record ID when editing a session (null = new)
 let _logEditType  = null;   // 'regular' | 'team'
 let _agEditId     = null;   // record ID when editing a game (null = new)
+let _filterCount = 'all';  // player count filter: 'all' | number
 
 // ── Helpers ───────────────────────────────────────────────────
 function fmtDate(d) {
@@ -1463,23 +1482,28 @@ function renderFilterButtons() {
   _gamesLibrary.forEach(game => effectiveCounts(game).forEach(c => counts.add(c)));
   const sorted = [...counts].sort((a, b) => a - b);
   const bar = document.getElementById('filter-bar');
-  bar.innerHTML = `<button class="filter-btn active" data-count="all">All</button>
-    ${sorted.map(n => `<button class="filter-btn" data-count="${n}">${n}</button>`).join('')}`;
+  bar.innerHTML =
+    `<button class="filter-btn${_filterCount === 'all' ? ' active' : ''}" data-count="all">All</button>` +
+    sorted.map(n => `<button class="filter-btn${_filterCount === n ? ' active' : ''}" data-count="${n}">${n}</button>`).join('');
 }
 
 // ── Catalog render (uses module state) ────────────────────────
 const catalogGrid = document.getElementById("catalog-grid");
-function renderCatalog(filterCount) {
+function renderCatalog() {
   catalogGrid.innerHTML = "";
-  _gamesLibrary.forEach(game => {
+  let games = [..._gamesLibrary];
+  if (_filterCount !== 'all') games = games.filter(g => effectiveCounts(g).includes(_filterCount));
+  // Favorites float to top
+  games.sort((a, b) => (b.favorite ? 1 : 0) - (a.favorite ? 1 : 0));
+  games.forEach(game => {
     const plays = _gameCounts[game.name] || 0;
     const counts = effectiveCounts(game);
-    const visible = filterCount === "all" || counts.includes(filterCount);
     const playerStr = formatCountsDisplay(counts);
     const expBadge = hasOwnedExpansion(game.name) ? `<span class="exp-badge">+exp</span>` : "";
     const card = document.createElement("div");
-    card.className = `game-card${visible ? "" : " hidden"}`;
+    card.className = "game-card";
     card.innerHTML = `
+      <button class="game-fave-btn${game.favorite ? ' active' : ''}" onclick="toggleFavorite('${game.id}',event)">★</button>
       <div class="game-card-name">${game.name}</div>
       <div class="game-card-meta">
         <span class="game-card-players">${playerStr} ${expBadge}</span>
@@ -1488,6 +1512,17 @@ function renderCatalog(filterCount) {
     card.addEventListener("click", () => openGameModal(game));
     catalogGrid.appendChild(card);
   });
+}
+
+// ── Toggle favorite ───────────────────────────────────────────
+function toggleFavorite(gameId, e) {
+  e.stopPropagation();
+  const game = _gamesLibrary.find(g => g.id === gameId);
+  if (!game) return;
+  game.favorite = !game.favorite;
+  atUpdate('Games Library', gameId, { Favorite: game.favorite });
+  localStorage.removeItem(CACHE_KEY);
+  renderCatalog();
 }
 
 // ── Main render ───────────────────────────────────────────────
@@ -1680,9 +1715,9 @@ function renderDashboard(gamesLibrary, playLog, expansions, teamSessions) {
     }
   });
 
-  // Catalog + reset filter
+  // Catalog
   renderFilterButtons();
-  renderCatalog("all");
+  renderCatalog();
 }
 
 // ── Game Modal ────────────────────────────────────────────────
@@ -1755,16 +1790,11 @@ function openGameModal(game) {
   if (totalPlays === 0) {
     body.innerHTML = `<div class="modal-empty">No sessions logged yet.</div>`;
   } else {
-    const groupAvgHTML = groupAvgs.length > 1 ? `
-      <div class="group-avg-row">
-        <span class="group-avg-label">Avg by group size</span>
-        ${groupAvgs.map(g => `<span class="group-avg-chip"><span>${g.players}p</span>${fmtDuration(g.avg)}</span>`).join("")}
-      </div>` : "";
     const allSessions = [
       ...sessions.map(s => ({ ...s, _type: 'regular' })),
       ...teamSessions.map(ts => ({ ...ts, _type: 'team' }))
     ].sort((a, b) => b.date.localeCompare(a.date));
-    body.innerHTML = groupAvgHTML + `
+    body.innerHTML = `
       <table><thead><tr>
         <th>Date</th><th>Players</th>
         <th style="text-align:right;width:38px">Time</th><th>Result</th>
@@ -2317,8 +2347,8 @@ document.getElementById('filter-bar').addEventListener('click', e => {
   if (!btn) return;
   document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
   btn.classList.add('active');
-  const count = btn.dataset.count === 'all' ? 'all' : parseInt(btn.dataset.count);
-  renderCatalog(count);
+  _filterCount = btn.dataset.count === 'all' ? 'all' : parseInt(btn.dataset.count);
+  renderCatalog();
 });
 
 // ── Add Game Modal ────────────────────────────────────────────
