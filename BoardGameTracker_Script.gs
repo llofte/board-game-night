@@ -143,6 +143,37 @@ function doGet(e) {
     return addGame(e.parameter);
   }
 
+  // ── Maintenance actions (called by Claude via HTTP, no editor needed) ──
+  if (e.parameter.action === 'sortGamesLibrary') {
+    const ss2 = SpreadsheetApp.getActiveSpreadsheet();
+    sortGamesLibrary(ss2);
+    return ContentService.createTextOutput('✅ Games Library sorted.').setMimeType(ContentService.MimeType.TEXT);
+  }
+  if (e.parameter.action === 'removeDuplicateGames') {
+    removeDuplicateGames();
+    return ContentService.createTextOutput('✅ Duplicates removed and library re-sorted.').setMimeType(ContentService.MimeType.TEXT);
+  }
+  if (e.parameter.action === 'fixDuneImperiumData') {
+    fixDuneImperiumData();
+    return ContentService.createTextOutput('✅ Dune: Imperium data fixed.').setMimeType(ContentService.MimeType.TEXT);
+  }
+  if (e.parameter.action === 'addTeamGameData') {
+    addTeamGameData();
+    return ContentService.createTextOutput('✅ Team game data added (Uprising + Codenames).').setMimeType(ContentService.MimeType.TEXT);
+  }
+  if (e.parameter.action === 'setupTeamLog') {
+    setupTeamLog();
+    return ContentService.createTextOutput('✅ Team Log sheet ready.').setMimeType(ContentService.MimeType.TEXT);
+  }
+  if (e.parameter.action === 'runSetup') {
+    // Master setup: fix data + deduplicate + add team data + set up team log
+    fixDuneImperiumData();
+    addTeamGameData();
+    removeDuplicateGames();
+    setupTeamLog();
+    return ContentService.createTextOutput('✅ Full setup complete.').setMimeType(ContentService.MimeType.TEXT);
+  }
+
   // ── Default: return JSON data for the dashboard ──
   const ss = SpreadsheetApp.getActiveSpreadsheet();
   const output = {
