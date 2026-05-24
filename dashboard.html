@@ -97,7 +97,7 @@
       margin-bottom: 10px;
     }
     .stat-card .value {
-      font-size: 2rem;
+      font-size: 1.6rem;
       color: var(--accent-bright);
       line-height: 1;
       text-shadow: 0 0 12px rgba(192,122,56,0.3);
@@ -543,18 +543,16 @@
       right: 10px;
       background: none;
       border: 1px solid var(--border);
-      color: var(--text-muted);
       border-radius: 2px;
-      padding: 3px 8px;
+      padding: 4px;
       cursor: pointer;
-      font-size: 0.9rem;
-      line-height: 1.4;
-      font-family: 'Courier New', monospace;
-      letter-spacing: 0.06em;
-      transition: color 0.15s, border-color 0.15s, background 0.15s;
+      line-height: 0;
+      transition: border-color 0.15s, background 0.15s;
       -webkit-tap-highlight-color: transparent;
     }
-    .session-edit-btn:hover { color: var(--accent-bright); border-color: var(--accent); background: rgba(192,122,56,0.08); }
+    .session-edit-btn:hover { border-color: var(--accent); background: rgba(192,122,56,0.08); }
+    .session-edit-btn img { width: 18px; height: 18px; display: block; filter: invert(1); opacity: 0.4; }
+    .session-edit-btn:hover img { opacity: 0.75; }
 
     /* ── Team sessions ── */
     .team-tag {
@@ -718,7 +716,7 @@
       .stat-grid { grid-template-columns: repeat(2, 1fr); gap: 10px; }
       .stat-card { padding: 14px; }
       .stat-card .label { font-size: 0.9rem; }
-      .stat-card .value { font-size: 1.5rem; }
+      .stat-card .value { font-size: 1.2rem; }
       .stat-card .sub { display: none; }
 
       /* Section titles */
@@ -839,7 +837,7 @@
     }
     .form-input:focus, .form-select:focus, .form-textarea:focus { border-color: var(--accent); }
     .form-select { cursor: pointer; background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath d='M0 0l5 6 5-6z' fill='%235a6278'/%3E%3C/svg%3E"); background-repeat: no-repeat; background-position: right 12px center; padding-right: 32px; }
-    .form-textarea { resize: vertical; min-height: 70px; font-size: 0.9rem; }
+    .form-textarea { resize: vertical; min-height: 70px; }
 
     /* Tap chips — used for players, result type, duration */
     .chip-group { display: flex; flex-wrap: wrap; gap: 8px; }
@@ -1666,7 +1664,7 @@ function renderDashboard(gamesLibrary, playLog, expansions, teamSessions) {
           </div>
           ${hasScore ? `<div class="session-score">${s.team1score} – ${s.team2score}</div>` : ''}
           ${s.notes ? `<div class="session-notes">${s.notes}</div>` : ''}
-          <button class="session-edit-btn" data-session-id="${s.id}" data-session-type="teams">✏ edit</button>
+          <button class="session-edit-btn" data-session-id="${s.id}" data-session-type="teams"><img src="edit.jpeg" alt="edit"></button>
         </div>`;
     } else {
       sessionList.innerHTML += `
@@ -1678,7 +1676,7 @@ function renderDashboard(gamesLibrary, playLog, expansions, teamSessions) {
           <div class="session-players">${s.players.join(", ")}</div>
           <div class="session-podium">${buildPodiumHTML(s)}</div>
           ${s.notes ? `<div class="session-notes">${s.notes}</div>` : ""}
-          <button class="session-edit-btn" data-session-id="${s.id}" data-session-type="regular">✏ edit</button>
+          <button class="session-edit-btn" data-session-id="${s.id}" data-session-type="regular"><img src="edit.jpeg" alt="edit"></button>
         </div>`;
     }
   });
@@ -1885,7 +1883,7 @@ function openPlayerModal(name) {
         const won = (s.winner === 'team1' && s.team1.includes(name)) || (s.winner === 'team2' && s.team2.includes(name));
         return `
         <tr>
-          <td style="font-family:'Courier New',monospace;font-size:0.9rem;color:var(--text-muted)">${fmtDate(s.date)}</td>
+          <td style="font-family:'Courier New',monospace;font-size:0.9rem;color:var(--text-muted);white-space:nowrap">${fmtDate(s.date)}</td>
           <td>
             <div>${s.game}</div>
             <div style="font-size:0.9rem;color:var(--text-muted);margin-top:2px">${[...s.team1, ...s.team2].filter(p => p !== name).join(', ')}</div>
