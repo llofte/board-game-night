@@ -416,6 +416,7 @@
       justify-content: space-between;
       align-items: flex-start;
       gap: 16px;
+      flex-wrap: wrap;
     }
     .modal-title {
       font-size: 1.25rem;
@@ -1054,9 +1055,9 @@
       <div style="flex:1;min-width:0">
         <div class="modal-title" id="modal-title"></div>
         <div class="modal-subtitle" id="modal-subtitle"></div>
-        <div id="modal-links" style="display:flex;gap:6px;margin-top:8px;flex-wrap:wrap"></div>
       </div>
       <button class="modal-close" id="modal-close">✕</button>
+      <div id="modal-links" style="display:flex;gap:6px;flex-wrap:wrap;flex-basis:100%;margin-top:2px"></div>
     </div>
     <div class="modal-stats" id="modal-stats"></div>
     <div class="modal-owners" id="modal-owners"></div>
