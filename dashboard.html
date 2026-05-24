@@ -944,30 +944,71 @@
       </div>
 
       <div class="form-section">
-        <label class="form-label">Players</label>
-        <div class="chip-group" id="log-players"></div>
-        <div class="add-player-row">
-          <input type="text" class="form-input" id="log-new-player" placeholder="Add another player…" autocomplete="off" />
-          <button type="button" class="add-player-btn" id="log-add-player-btn">Add</button>
+        <label class="form-label">Session Type</label>
+        <div class="chip-group" id="log-type-chips">
+          <button class="chip active" data-type="regular">Regular</button>
+          <button class="chip" data-type="teams">Teams</button>
         </div>
       </div>
 
-      <div class="form-section">
-        <label class="form-label">Result</label>
-        <div class="chip-group" id="log-result-chips">
-          <button class="chip active" data-value="competitive">Competitive</button>
-          <button class="chip" data-value="coop_win">Co-op win</button>
-          <button class="chip" data-value="coop_loss">Co-op loss</button>
-          <button class="chip" data-value="DNF">DNF</button>
+      <div id="log-regular-section">
+        <div class="form-section">
+          <label class="form-label">Players</label>
+          <div class="chip-group" id="log-players"></div>
+          <div class="add-player-row">
+            <input type="text" class="form-input" id="log-new-player" placeholder="Add another player…" autocomplete="off" />
+            <button type="button" class="add-player-btn" id="log-add-player-btn">Add</button>
+          </div>
+        </div>
+
+        <div class="form-section">
+          <label class="form-label">Result</label>
+          <div class="chip-group" id="log-result-chips">
+            <button class="chip active" data-value="competitive">Competitive</button>
+            <button class="chip" data-value="coop_win">Co-op win</button>
+            <button class="chip" data-value="coop_loss">Co-op loss</button>
+            <button class="chip" data-value="DNF">DNF</button>
+          </div>
+        </div>
+
+        <div class="form-section" id="log-placing-section">
+          <label class="form-label">Placing</label>
+          <div class="placing-grid">
+            <div><div class="placing-sub">🥇 1st place</div><select class="form-select" id="log-first"><option value="">—</option></select></div>
+            <div><div class="placing-sub">🥈 2nd place</div><select class="form-select" id="log-second"><option value="">—</option></select></div>
+            <div><div class="placing-sub">🥉 3rd place</div><select class="form-select" id="log-third"><option value="">—</option></select></div>
+          </div>
         </div>
       </div>
 
-      <div class="form-section" id="log-placing-section">
-        <label class="form-label">Placing</label>
-        <div class="placing-grid">
-          <div><div class="placing-sub">🥇 1st place</div><select class="form-select" id="log-first"><option value="">—</option></select></div>
-          <div><div class="placing-sub">🥈 2nd place</div><select class="form-select" id="log-second"><option value="">—</option></select></div>
-          <div><div class="placing-sub">🥉 3rd place</div><select class="form-select" id="log-third"><option value="">—</option></select></div>
+      <div id="log-team-section" style="display:none">
+        <div class="form-section">
+          <label class="form-label">Team 1</label>
+          <div class="chip-group" id="log-team1"></div>
+        </div>
+        <div class="form-section">
+          <label class="form-label">Team 2</label>
+          <div class="chip-group" id="log-team2"></div>
+        </div>
+        <div class="form-section">
+          <label class="form-label">Winner</label>
+          <div class="chip-group" id="log-winner-chips">
+            <button class="chip" data-winner="team1">Team 1</button>
+            <button class="chip" data-winner="team2">Team 2</button>
+          </div>
+        </div>
+        <div class="form-section">
+          <label class="form-label">Scores <span style="color:var(--border-hi);font-size:0.85em">(optional)</span></label>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+            <div>
+              <div class="placing-sub" style="margin-bottom:6px">Team 1</div>
+              <input type="number" class="form-input" id="log-t1-score" min="0" placeholder="—" />
+            </div>
+            <div>
+              <div class="placing-sub" style="margin-bottom:6px">Team 2</div>
+              <input type="number" class="form-input" id="log-t2-score" min="0" placeholder="—" />
+            </div>
+          </div>
         </div>
       </div>
 
@@ -1206,10 +1247,25 @@ function buildPodiumHTML(s) {
   return s.places.slice(0, 3).map((name, i) => `<span>${MEDALS[i]} ${name}</span>`).join("");
 }
 
+// ── Renders expansion name with parentheticals in muted gray ──
+function fmtExpName(name) {
+  return name.replace(/(\(.*?\))/g, '<span style="color:var(--text-muted)">$1</span>');
+}
+
 // ── Returns true if the game has at least one owned expansion ─
 function hasOwnedExpansion(gameName) {
   const exps = _expansions[gameName];
   return exps ? exps.some(e => e.owned) : false;
+}
+
+// ── Extra player counts for games with non-contiguous ranges ──
+// Used when an expansion adds a specific count that doesn't fit a min–max range
+const GAME_EXTRA_COUNTS = {
+  "Dune: Imperium": [6]
+};
+function gameExtraCounts(game) {
+  if (!hasOwnedExpansion(game.name)) return [];
+  return GAME_EXTRA_COUNTS[game.name] || [];
 }
 
 // ── Effective player range accounting for owned expansions only
@@ -1227,8 +1283,13 @@ function renderCatalog(filterCount) {
   _gamesLibrary.forEach(game => {
     const plays = _gameCounts[game.name] || 0;
     const { min: effectiveMin, max: effectiveMax } = effectiveRange(game);
-    const visible = filterCount === "all" || (effectiveMin <= filterCount && effectiveMax >= filterCount);
-    const playerStr = effectiveMin === effectiveMax ? `${effectiveMin}` : `${effectiveMin}–${effectiveMax}`;
+    const extra = gameExtraCounts(game);
+    const visible = filterCount === "all"
+      || (effectiveMin <= filterCount && effectiveMax >= filterCount)
+      || extra.includes(filterCount);
+    const playerStr = extra.length > 0
+      ? `${effectiveMin}–${effectiveMax}, ${extra.join(', ')}`
+      : effectiveMin === effectiveMax ? `${effectiveMin}` : `${effectiveMin}–${effectiveMax}`;
     const expBadge = hasOwnedExpansion(game.name) ? `<span class="exp-badge">+exp</span>` : "";
     const card = document.createElement("div");
     card.className = `game-card${visible ? "" : " hidden"}`;
@@ -1446,8 +1507,13 @@ function openGameModal(game) {
     .map(([n, d]) => ({ players: n, avg: Math.round(d.total / d.count) }));
 
   document.getElementById("modal-title").textContent = game.name;
-  const expStr = game.expansionMax
-    ? `  ·  ${game.expansionMin ?? game.min}–${game.expansionMax} w/ expansions` : "";
+  const extraCounts = gameExtraCounts(game);
+  let expStr = "";
+  if (extraCounts.length > 0) {
+    expStr = `  ·  ${game.min}–${game.max}, ${extraCounts.join(', ')} w/ expansions`;
+  } else if (game.expansionMax && game.expansionMax !== game.max) {
+    expStr = `  ·  ${game.expansionMin ?? game.min}–${game.expansionMax} w/ expansions`;
+  }
   document.getElementById("modal-subtitle").textContent = `${game.min}–${game.max} players${expStr}`;
   const genreEl = document.getElementById("modal-genre");
   genreEl.textContent = game.genre ?? "";
@@ -1474,7 +1540,7 @@ function openGameModal(game) {
           const ownerTag = e.owner ? `<span class="exp-owner">${e.owner}</span>` : "";
           return `
           <div class="expansion-item${e.owned ? " owned" : ""}">
-            <span class="${e.owned ? "exp-owned" : "exp-unowned"}">${e.owned ? "✓" : "⊘"}</span>${e.name}${ownerTag}
+            <span class="${e.owned ? "exp-owned" : "exp-unowned"}">${e.owned ? "✓" : "⊘"}</span>${fmtExpName(e.name)}${ownerTag}
           </div>`;
         }).join("")}
       </div>`;
@@ -1606,7 +1672,13 @@ function openPlayerModal(name) {
 }
 
 // ── Log Session Modal ─────────────────────────────────────────
-const PLAYERS = ['Dave','Leanna','Peter','Mark','Jay','Ben','Shannon','Marc','Heather','Nathan'];
+const PLAYERS    = ['Dave','Leanna','Peter','Mark','Jay','Ben','Shannon','Marc','Heather','Nathan'];
+const TEAM_GAMES = ['Codenames'];
+
+function toggleSessionType(type) {
+  document.getElementById('log-regular-section').style.display = type === 'regular' ? '' : 'none';
+  document.getElementById('log-team-section').style.display   = type === 'teams'   ? '' : 'none';
+}
 
 function openLogModal() {
   document.getElementById('log-date').value = new Date().toISOString().split('T')[0];
@@ -1616,7 +1688,12 @@ function openLogModal() {
   gameSelect.innerHTML = '<option value="">Select a game…</option>'
     + _gamesLibrary.map(g => `<option value="${g.name}">${g.name}</option>`).join('');
 
-  // Player chips
+  // Reset session type to regular
+  document.querySelectorAll('#log-type-chips .chip').forEach(c => c.classList.remove('active'));
+  document.querySelector('#log-type-chips .chip[data-type="regular"]').classList.add('active');
+  toggleSessionType('regular');
+
+  // Player chips (regular)
   document.getElementById('log-players').innerHTML = PLAYERS.map(p =>
     `<button class="chip" data-player="${p}">${p}</button>`).join('');
   document.getElementById('log-new-player').value = '';
@@ -1626,6 +1703,14 @@ function openLogModal() {
   document.querySelector('#log-result-chips .chip[data-value="competitive"]').classList.add('active');
   document.getElementById('log-placing-section').style.display = '';
   updatePlacingDropdowns();
+
+  // Team chips
+  const playerChipsHTML = PLAYERS.map(p => `<button class="chip" data-player="${p}">${p}</button>`).join('');
+  document.getElementById('log-team1').innerHTML = playerChipsHTML;
+  document.getElementById('log-team2').innerHTML = playerChipsHTML;
+  document.querySelectorAll('#log-winner-chips .chip').forEach(c => c.classList.remove('active'));
+  document.getElementById('log-t1-score').value = '';
+  document.getElementById('log-t2-score').value = '';
 
   // Reset duration chips
   document.querySelectorAll('#log-duration-chips .chip').forEach(c => c.classList.remove('active'));
@@ -1653,12 +1738,11 @@ function updatePlacingDropdowns() {
 }
 
 async function submitSession() {
-  const date    = document.getElementById('log-date').value;
-  const game    = document.getElementById('log-game').value;
-  const players = [...document.querySelectorAll('#log-players .chip.active')].map(c => c.dataset.player);
-  const resultChip = document.querySelector('#log-result-chips .chip.active');
-  const result  = resultChip ? resultChip.dataset.value : 'competitive';
+  const sessionType = document.querySelector('#log-type-chips .chip.active')?.dataset.type || 'regular';
+  const date = document.getElementById('log-date').value;
+  const game = document.getElementById('log-game').value;
 
+  // Duration (shared)
   const durChip = document.querySelector('#log-duration-chips .chip.active');
   let duration = 0;
   if (durChip && durChip.dataset.mins !== 'other') {
@@ -1668,34 +1752,64 @@ async function submitSession() {
     const min = parseInt(document.getElementById('log-custom-min').value) || 0;
     duration = hrs * 60 + min;
   }
-
   const notes = document.getElementById('log-notes').value.trim();
 
-  if (!date)           { logFeedback('Please select a date.', 'err'); return; }
-  if (!game)           { logFeedback('Please select a game.', 'err'); return; }
-  if (!players.length) { logFeedback('Please select at least one player.', 'err'); return; }
-
-  const fields = { Date: date, Game: game, Players: players.join(', ') };
-  if (result === 'competitive') {
-    const first  = document.getElementById('log-first').value;
-    const second = document.getElementById('log-second').value;
-    const third  = document.getElementById('log-third').value;
-    if (!first) { logFeedback('Please select a 1st place winner.', 'err'); return; }
-    fields['1st Place'] = first;
-    if (second) fields['2nd Place'] = second;
-    if (third)  fields['3rd Place'] = third;
-  } else if (result === 'DNF')       { fields['1st Place'] = 'DNF'; }
-    else if (result === 'coop_win')  { fields['1st Place'] = 'Everyone!'; }
-    else if (result === 'coop_loss') { fields['1st Place'] = 'Loss'; }
-  if (duration > 0) fields['Duration'] = duration;
-  if (notes)        fields['Notes']    = notes;
+  if (!date) { logFeedback('Please select a date.', 'err'); return; }
+  if (!game) { logFeedback('Please select a game.', 'err'); return; }
 
   const btn = document.getElementById('log-submit');
   btn.disabled = true;
   btn.textContent = 'Submitting…';
 
   try {
-    await atCreate('Play Log', fields);
+    if (sessionType === 'teams') {
+      const team1      = [...document.querySelectorAll('#log-team1 .chip.active')].map(c => c.dataset.player);
+      const team2      = [...document.querySelectorAll('#log-team2 .chip.active')].map(c => c.dataset.player);
+      const winnerChip = document.querySelector('#log-winner-chips .chip.active');
+      const winner     = winnerChip?.dataset.winner;
+      const t1score    = document.getElementById('log-t1-score').value;
+      const t2score    = document.getElementById('log-t2-score').value;
+
+      if (!team1.length) { logFeedback('Please select Team 1 players.', 'err'); btn.disabled = false; btn.textContent = 'Submit Session'; return; }
+      if (!team2.length) { logFeedback('Please select Team 2 players.', 'err'); btn.disabled = false; btn.textContent = 'Submit Session'; return; }
+      if (!winner)       { logFeedback('Please select a winner.', 'err');       btn.disabled = false; btn.textContent = 'Submit Session'; return; }
+
+      const fields = {
+        Date: date, Game: game,
+        'Team 1': team1.join(', '),
+        'Team 2': team2.join(', '),
+        Winner: winner === 'team1' ? 'Team 1' : 'Team 2'
+      };
+      if (t1score !== '') fields['T1 Score'] = Number(t1score);
+      if (t2score !== '') fields['T2 Score'] = Number(t2score);
+      if (duration > 0)   fields['Duration'] = duration;
+      if (notes)          fields['Notes']    = notes;
+      await atCreate('Team Log', fields);
+
+    } else {
+      const players    = [...document.querySelectorAll('#log-players .chip.active')].map(c => c.dataset.player);
+      const resultChip = document.querySelector('#log-result-chips .chip.active');
+      const result     = resultChip ? resultChip.dataset.value : 'competitive';
+
+      if (!players.length) { logFeedback('Please select at least one player.', 'err'); btn.disabled = false; btn.textContent = 'Submit Session'; return; }
+
+      const fields = { Date: date, Game: game, Players: players.join(', ') };
+      if (result === 'competitive') {
+        const first  = document.getElementById('log-first').value;
+        const second = document.getElementById('log-second').value;
+        const third  = document.getElementById('log-third').value;
+        if (!first) { logFeedback('Please select a 1st place winner.', 'err'); btn.disabled = false; btn.textContent = 'Submit Session'; return; }
+        fields['1st Place'] = first;
+        if (second) fields['2nd Place'] = second;
+        if (third)  fields['3rd Place'] = third;
+      } else if (result === 'DNF')       { fields['1st Place'] = 'DNF'; }
+        else if (result === 'coop_win')  { fields['1st Place'] = 'Everyone!'; }
+        else if (result === 'coop_loss') { fields['1st Place'] = 'Loss'; }
+      if (duration > 0) fields['Duration'] = duration;
+      if (notes)        fields['Notes']    = notes;
+      await atCreate('Play Log', fields);
+    }
+
     logFeedback('✅ Session logged!', 'ok');
     btn.textContent = 'Logged!';
     setTimeout(init, 1200);
@@ -1743,12 +1857,49 @@ document.getElementById('log-new-player').addEventListener('keydown', e => {
   if (e.key === 'Enter') { e.preventDefault(); addCustomPlayer(); }
 });
 
-// Player chip clicks
+// Player chip clicks (regular)
 document.getElementById('log-players').addEventListener('click', e => {
   const chip = e.target.closest('.chip');
   if (!chip) return;
   chip.classList.toggle('active');
   updatePlacingDropdowns();
+});
+
+// Team chip clicks
+document.getElementById('log-team1').addEventListener('click', e => {
+  const chip = e.target.closest('.chip');
+  if (!chip) return;
+  chip.classList.toggle('active');
+});
+document.getElementById('log-team2').addEventListener('click', e => {
+  const chip = e.target.closest('.chip');
+  if (!chip) return;
+  chip.classList.toggle('active');
+});
+
+// Session type chips
+document.getElementById('log-type-chips').addEventListener('click', e => {
+  const chip = e.target.closest('.chip');
+  if (!chip) return;
+  document.querySelectorAll('#log-type-chips .chip').forEach(c => c.classList.remove('active'));
+  chip.classList.add('active');
+  toggleSessionType(chip.dataset.type);
+});
+
+// Winner chips (single select)
+document.getElementById('log-winner-chips').addEventListener('click', e => {
+  const chip = e.target.closest('.chip');
+  if (!chip) return;
+  document.querySelectorAll('#log-winner-chips .chip').forEach(c => c.classList.remove('active'));
+  chip.classList.add('active');
+});
+
+// Auto-switch to Teams mode for known team games
+document.getElementById('log-game').addEventListener('change', e => {
+  const type = TEAM_GAMES.includes(e.target.value) ? 'teams' : 'regular';
+  document.querySelectorAll('#log-type-chips .chip').forEach(c => c.classList.remove('active'));
+  document.querySelector(`#log-type-chips .chip[data-type="${type}"]`).classList.add('active');
+  toggleSessionType(type);
 });
 
 // Result chip clicks (single select)
