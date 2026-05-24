@@ -540,21 +540,71 @@
     .exp-unowned { color: var(--border-hi); }
     .exp-owner   { font-size: 0.76rem; color: var(--text-muted); margin-left: 2px; }
 
-    /* ── Session edit button ── */
-    .session-edit-btn {
+    /* ── Session action sheet ── */
+    .session-action-sheet {
+      background: var(--surface);
+      border: 1px solid var(--border-hi);
+      border-radius: 4px;
+      width: calc(100% - 32px);
+      max-width: 420px;
+      margin: auto;
+      overflow: hidden;
+    }
+    .session-action-info {
+      padding: 16px 20px 14px;
+      border-bottom: 1px solid var(--border);
+      background: var(--bg);
+    }
+    .session-action-game {
+      font-size: 1.05rem;
+      color: var(--accent-bright);
+    }
+    .session-action-detail {
+      font-size: 0.78rem;
+      color: var(--text-muted);
+      font-family: 'Courier New', monospace;
+      margin-top: 5px;
+      line-height: 1.5;
+    }
+    .session-action-btn {
+      display: block;
+      width: 100%;
+      padding: 15px 20px;
       background: none;
       border: none;
-      color: var(--text-muted);
+      border-bottom: 1px solid var(--border);
+      color: var(--text);
+      font-family: 'Georgia', serif;
+      font-size: 0.95rem;
+      text-align: left;
       cursor: pointer;
-      font-size: 0.75rem;
-      padding: 0 2px;
-      opacity: 0;
-      transition: opacity 0.15s, color 0.15s;
-      line-height: 1;
-      flex-shrink: 0;
+      transition: background 0.12s;
+      -webkit-tap-highlight-color: transparent;
     }
-    .session:hover .session-edit-btn { opacity: 1; }
-    .session-edit-btn:hover { color: var(--accent-bright) !important; }
+    .session-action-btn:last-child { border-bottom: none; }
+    .session-action-btn:hover, .session-action-btn:active { background: var(--surface2); }
+    .session-action-btn.danger { color: var(--red); }
+    .session-action-btn.danger.armed { background: rgba(160,72,64,0.2); }
+    .session-action-cancel {
+      display: block;
+      width: calc(100% - 32px);
+      max-width: 420px;
+      margin: 10px auto 0;
+      padding: 14px;
+      background: var(--surface2);
+      border: 1px solid var(--border-hi);
+      border-radius: 4px;
+      color: var(--text-muted);
+      font-family: 'Courier New', monospace;
+      font-size: 0.8rem;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      cursor: pointer;
+      text-align: center;
+      -webkit-tap-highlight-color: transparent;
+      transition: color 0.12s, background 0.12s;
+    }
+    .session-action-cancel:hover { color: var(--text); background: var(--surface); }
 
     /* ── Team sessions ── */
     .team-tag {
@@ -1119,9 +1169,6 @@
 
       <button class="log-submit-btn" id="log-submit">Submit Session</button>
       <div class="log-feedback" id="log-feedback"></div>
-      <div class="delete-record-row" id="log-delete-row" style="display:none">
-        <button class="delete-record-btn" id="log-delete-btn">Delete session</button>
-      </div>
     </div>
   </div>
 </div>
@@ -1192,6 +1239,20 @@
       <div class="log-feedback" id="ag-feedback"></div>
     </div>
   </div>
+</div>
+
+<!-- Session action sheet -->
+<div class="modal-backdrop" id="session-action-backdrop">
+  <div class="session-action-sheet">
+    <div class="session-action-info">
+      <div class="session-action-game" id="session-action-game"></div>
+      <div class="session-action-detail" id="session-action-detail"></div>
+    </div>
+    <button class="session-action-btn" id="session-action-view">View game details →</button>
+    <button class="session-action-btn" id="session-action-edit">Edit session</button>
+    <button class="session-action-btn danger" id="session-action-delete">Delete session</button>
+  </div>
+  <button class="session-action-cancel" id="session-action-cancel">Cancel</button>
 </div>
 
 <!-- Player profile modal -->
@@ -1599,13 +1660,10 @@ function renderDashboard(gamesLibrary, playLog, expansions, teamSessions) {
       const t1win = s.winner === 'team1';
       const t2win = s.winner === 'team2';
       sessionList.innerHTML += `
-        <div class="session" data-game="${s.game}">
+        <div class="session" data-game="${s.game}" data-session-id="${s.id}" data-session-type="team">
           <div class="session-top">
             <span class="session-game">${s.game}</span>
-            <div style="display:flex;align-items:center;gap:8px">
-              <button class="session-edit-btn" onclick="event.stopPropagation();openEditSessionModal('${s.id}','team')">✏</button>
-              <span class="session-date">${fmtDate(s.date)}</span>
-            </div>
+            <span class="session-date">${fmtDate(s.date)}</span>
           </div>
           <div class="session-teams">
             <span class="team-label${t1win ? ' winner' : ''}">${s.team1.join(', ')}</span>
@@ -1617,13 +1675,10 @@ function renderDashboard(gamesLibrary, playLog, expansions, teamSessions) {
         </div>`;
     } else {
       sessionList.innerHTML += `
-        <div class="session" data-game="${s.game}">
+        <div class="session" data-game="${s.game}" data-session-id="${s.id}" data-session-type="regular">
           <div class="session-top">
             <span class="session-game">${s.game}</span>
-            <div style="display:flex;align-items:center;gap:8px">
-              <button class="session-edit-btn" onclick="event.stopPropagation();openEditSessionModal('${s.id}','regular')">✏</button>
-              <span class="session-date">${fmtDate(s.date)}</span>
-            </div>
+            <span class="session-date">${fmtDate(s.date)}</span>
           </div>
           <div class="session-players">${s.players.join(", ")}</div>
           <div class="session-podium">${buildPodiumHTML(s)}</div>
@@ -1966,47 +2021,6 @@ function openLogModal(session = null, sessionType = null) {
   btn.disabled = false;
   btn.textContent = isEdit ? 'Save Changes' : 'Submit Session';
 
-  // Delete row — only visible when editing
-  const deleteRow = document.getElementById('log-delete-row');
-  const deleteBtn = document.getElementById('log-delete-btn');
-  deleteRow.style.display = isEdit ? '' : 'none';
-  deleteBtn.textContent = 'Delete session';
-  deleteBtn.classList.remove('armed');
-  deleteBtn.dataset.armed = '';
-  clearTimeout(deleteBtn._resetTimer);
-  deleteBtn.onclick = null;
-  if (isEdit) {
-    const editId   = _logEditId;
-    const editType = _logEditType;
-    deleteBtn.onclick = (e) => {
-      if (deleteBtn.dataset.armed === '1') {
-        deleteBtn.textContent = 'Deleting…';
-        deleteBtn.disabled = true;
-        const table = editType === 'team' ? 'Team Log' : 'Play Log';
-        atDelete(table, editId).then(() => {
-          _logEditId = null; _logEditType = null;
-          document.getElementById('log-modal-backdrop').classList.remove('open');
-          init();
-        }).catch(() => {
-          deleteBtn.textContent = 'Error — try again';
-          deleteBtn.disabled = false;
-          deleteBtn.dataset.armed = '';
-          deleteBtn.classList.remove('armed');
-        });
-      } else {
-        deleteBtn.dataset.armed = '1';
-        deleteBtn.classList.add('armed');
-        deleteBtn.textContent = '⚠ Confirm delete';
-        clearTimeout(deleteBtn._resetTimer);
-        deleteBtn._resetTimer = setTimeout(() => {
-          deleteBtn.dataset.armed = '';
-          deleteBtn.classList.remove('armed');
-          deleteBtn.textContent = 'Delete session';
-        }, 3000);
-      }
-    };
-  }
-
   document.getElementById('log-modal-backdrop').classList.add('open');
 }
 
@@ -2210,10 +2224,6 @@ const logBackdrop = document.getElementById('log-modal-backdrop');
 function closeLogModal() {
   logBackdrop.classList.remove('open');
   _logEditId = null; _logEditType = null;
-  const deleteBtn = document.getElementById('log-delete-btn');
-  clearTimeout(deleteBtn._resetTimer);
-  deleteBtn.dataset.armed = ''; deleteBtn.classList.remove('armed');
-  deleteBtn.textContent = 'Delete session'; deleteBtn.disabled = false;
 }
 document.getElementById('log-modal-close').addEventListener('click', closeLogModal);
 logBackdrop.addEventListener('click', e => { if (e.target === logBackdrop) closeLogModal(); });
@@ -2230,16 +2240,90 @@ document.addEventListener("keydown", e => {
     backdrop.classList.remove("open");
     playerBackdrop.classList.remove("open");
     closeLogModal();
+    closeSessionActionSheet();
     agBackdrop.classList.remove("open"); _agEditId = null;
   }
 });
 
-// ── Session list → open game modal ───────────────────────────
+// ── Session list → action sheet ──────────────────────────────
 document.getElementById("session-list").addEventListener("click", e => {
   const card = e.target.closest(".session");
   if (!card) return;
-  const game = _gamesLibrary.find(g => g.name === card.dataset.game);
-  if (game) openGameModal(game);
+  openSessionActionSheet(card.dataset.sessionId, card.dataset.sessionType, card.dataset.game);
+});
+
+function openSessionActionSheet(sessionId, sessionType, gameName) {
+  const session = sessionType === 'team'
+    ? _teamSessions.find(ts => ts.id === sessionId)
+    : _playLog.find(s => s.id === sessionId);
+  if (!session) return;
+
+  // Header info
+  document.getElementById('session-action-game').textContent = gameName;
+  let detail = fmtDate(session.date);
+  if (sessionType === 'team') {
+    detail += '\n' + session.team1.join(', ') + ' vs ' + session.team2.join(', ');
+  } else {
+    detail += '\n' + session.players.join(', ');
+    const result = buildPodiumHTML(session).replace(/<[^>]+>/g, '').trim();
+    if (result) detail += '\n' + result;
+  }
+  document.getElementById('session-action-detail').textContent = detail;
+
+  // Reset delete button state
+  const delBtn = document.getElementById('session-action-delete');
+  delBtn.textContent = 'Delete session';
+  delBtn.classList.remove('armed');
+  delBtn.dataset.armed = '';
+  delBtn.disabled = false;
+  clearTimeout(delBtn._resetTimer);
+
+  // Wire buttons
+  document.getElementById('session-action-view').onclick = () => {
+    closeSessionActionSheet();
+    const game = _gamesLibrary.find(g => g.name === gameName);
+    if (game) openGameModal(game);
+  };
+  document.getElementById('session-action-edit').onclick = () => {
+    closeSessionActionSheet();
+    openEditSessionModal(sessionId, sessionType);
+  };
+  delBtn.onclick = () => {
+    if (delBtn.dataset.armed === '1') {
+      delBtn.textContent = 'Deleting…';
+      delBtn.disabled = true;
+      const table = sessionType === 'team' ? 'Team Log' : 'Play Log';
+      atDelete(table, sessionId).then(() => {
+        closeSessionActionSheet();
+        init();
+      }).catch(() => {
+        delBtn.textContent = 'Error — try again';
+        delBtn.disabled = false;
+        delBtn.dataset.armed = '';
+        delBtn.classList.remove('armed');
+      });
+    } else {
+      delBtn.dataset.armed = '1';
+      delBtn.classList.add('armed');
+      delBtn.textContent = '⚠ Tap again to confirm delete';
+      clearTimeout(delBtn._resetTimer);
+      delBtn._resetTimer = setTimeout(() => {
+        delBtn.dataset.armed = '';
+        delBtn.classList.remove('armed');
+        delBtn.textContent = 'Delete session';
+      }, 3000);
+    }
+  };
+
+  document.getElementById('session-action-backdrop').classList.add('open');
+}
+
+function closeSessionActionSheet() {
+  document.getElementById('session-action-backdrop').classList.remove('open');
+}
+document.getElementById('session-action-cancel').addEventListener('click', closeSessionActionSheet);
+document.getElementById('session-action-backdrop').addEventListener('click', e => {
+  if (e.target === document.getElementById('session-action-backdrop')) closeSessionActionSheet();
 });
 
 // ── Filter buttons ────────────────────────────────────────────
