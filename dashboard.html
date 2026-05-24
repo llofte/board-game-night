@@ -540,6 +540,22 @@
     .exp-unowned { color: var(--border-hi); }
     .exp-owner   { font-size: 0.76rem; color: var(--text-muted); margin-left: 2px; }
 
+    /* ── Session edit button ── */
+    .session-edit-btn {
+      background: none;
+      border: none;
+      color: var(--text-muted);
+      cursor: pointer;
+      font-size: 0.75rem;
+      padding: 0 2px;
+      opacity: 0;
+      transition: opacity 0.15s, color 0.15s;
+      line-height: 1;
+      flex-shrink: 0;
+    }
+    .session:hover .session-edit-btn { opacity: 1; }
+    .session-edit-btn:hover { color: var(--accent-bright) !important; }
+
     /* ── Team sessions ── */
     .team-tag {
       display: inline-block;
@@ -914,6 +930,7 @@
         <div class="modal-genre" id="modal-genre"></div>
       </div>
       <div style="display:flex;align-items:center;gap:8px;flex-shrink:0">
+        <button class="add-game-btn" id="modal-edit-game-btn">Edit</button>
         <a class="modal-rules-btn" id="modal-bgg-btn" href="#" target="_blank" rel="noopener">BGG ↗</a>
         <a class="modal-rules-btn" id="modal-rules-btn" href="#" target="_blank" rel="noopener">Rules ↗</a>
         <button class="modal-close" id="modal-close">✕</button>
@@ -930,7 +947,7 @@
 <div class="modal-backdrop" id="log-modal-backdrop">
   <div class="modal" style="max-width:520px">
     <div class="modal-header">
-      <div class="modal-title">Log a Session</div>
+      <div class="modal-title" id="log-modal-title">Log a Session</div>
       <button class="modal-close" id="log-modal-close">✕</button>
     </div>
     <div class="modal-body" style="padding:20px 24px 28px">
@@ -1046,7 +1063,7 @@
 <div class="modal-backdrop" id="add-game-modal-backdrop">
   <div class="modal" style="max-width:520px">
     <div class="modal-header">
-      <div class="modal-title">Add a Game</div>
+      <div class="modal-title" id="ag-modal-title">Add a Game</div>
       <button class="modal-close" id="add-game-modal-close">✕</button>
     </div>
     <div class="modal-body" style="padding:20px 24px 28px">
@@ -1087,6 +1104,21 @@
       <div class="form-section">
         <label class="form-label">Owned by <span style="color:var(--border-hi);font-size:0.85em">(optional)</span></label>
         <div class="chip-group" id="ag-owners"></div>
+      </div>
+
+      <div class="form-section">
+        <label class="form-label">Genre <span style="color:var(--border-hi);font-size:0.85em">(optional)</span></label>
+        <input type="text" class="form-input" id="ag-genre" placeholder="e.g. Worker Placement" autocomplete="off" />
+      </div>
+
+      <div class="form-section">
+        <label class="form-label">BGG URL <span style="color:var(--border-hi);font-size:0.85em">(optional)</span></label>
+        <input type="url" class="form-input" id="ag-bgg-url" placeholder="https://boardgamegeek.com/boardgame/…" />
+      </div>
+
+      <div class="form-section">
+        <label class="form-label">Rules URL <span style="color:var(--border-hi);font-size:0.85em">(optional)</span></label>
+        <input type="url" class="form-input" id="ag-rules-url" placeholder="https://…" />
       </div>
 
       <button class="log-submit-btn" id="ag-submit">Add Game</button>
@@ -1139,11 +1171,21 @@ async function atCreate(table, fields) {
   if (data.error) throw new Error(data.error.message);
   return data.records[0];
 }
+async function atUpdate(table, recordId, fields) {
+  const res  = await fetch(`${AT_URL}/${encodeURIComponent(table)}/${recordId}`, {
+    method: "PATCH", headers: AT_HDR,
+    body: JSON.stringify({ fields })
+  });
+  const data = await res.json();
+  if (data.error) throw new Error(data.error.message);
+  return data;
+}
 
 // ── Data parsers ──────────────────────────────────────────────
 function parseGame(r) {
   const f = r.fields;
   return {
+    id:           r.id,
     name:         f["Game Name"]     || "",
     min:          f["Min Players"]   ?? null,
     max:          f["Max Players"]   ?? null,
@@ -1158,6 +1200,7 @@ function parseGame(r) {
 function parseSession(r) {
   const f = r.fields;
   return {
+    id:       r.id,
     date:     f["Date"]    || "",
     game:     f["Game"]    || "",
     players:  f["Players"] ? f["Players"].split(",").map(s => s.trim()).filter(Boolean) : [],
@@ -1173,6 +1216,7 @@ function parseExpansion(r) {
 function parseTeamSession(r) {
   const f = r.fields;
   return {
+    id:         r.id,
     date:       f["Date"] || "",
     game:       f["Game"] || "",
     team1:      f["Team 1"] ? f["Team 1"].split(",").map(s => s.trim()).filter(Boolean) : [],
@@ -1202,6 +1246,9 @@ let _leaderboard  = [];
 let _gameCounts   = {};
 let _chart        = null;
 let _teamSessions = [];
+let _logEditId    = null;   // record ID when editing a session (null = new)
+let _logEditType  = null;   // 'regular' | 'team'
+let _agEditId     = null;   // record ID when editing a game (null = new)
 
 // ── Helpers ───────────────────────────────────────────────────
 function fmtDate(d) {
@@ -1480,7 +1527,10 @@ function renderDashboard(gamesLibrary, playLog, expansions, teamSessions) {
         <div class="session" data-game="${s.game}">
           <div class="session-top">
             <span class="session-game">${s.game}</span>
-            <span class="session-date">${fmtDate(s.date)}</span>
+            <div style="display:flex;align-items:center;gap:8px">
+              <button class="session-edit-btn" onclick="event.stopPropagation();openEditSessionModal('${s.id}','team')">✏</button>
+              <span class="session-date">${fmtDate(s.date)}</span>
+            </div>
           </div>
           <div class="session-teams">
             <span class="team-label${t1win ? ' winner' : ''}">${s.team1.join(', ')}</span>
@@ -1495,7 +1545,10 @@ function renderDashboard(gamesLibrary, playLog, expansions, teamSessions) {
         <div class="session" data-game="${s.game}">
           <div class="session-top">
             <span class="session-game">${s.game}</span>
-            <span class="session-date">${fmtDate(s.date)}</span>
+            <div style="display:flex;align-items:center;gap:8px">
+              <button class="session-edit-btn" onclick="event.stopPropagation();openEditSessionModal('${s.id}','regular')">✏</button>
+              <span class="session-date">${fmtDate(s.date)}</span>
+            </div>
           </div>
           <div class="session-players">${s.players.join(", ")}</div>
           <div class="session-podium">${buildPodiumHTML(s)}</div>
@@ -1629,6 +1682,10 @@ function openGameModal(game) {
         ${s.notes ? `<tr style="border-top:none"><td colspan="4" style="padding:0 8px 10px;font-size:0.75rem;color:var(--text-muted);font-style:italic">📝 ${s.notes}</td></tr>` : ""}`;
       }).join("")}</tbody></table>`;
   }
+  document.getElementById("modal-edit-game-btn").onclick = () => {
+    document.getElementById("modal-backdrop").classList.remove("open");
+    openAddGameModal(game);
+  };
   document.getElementById("modal-backdrop").classList.add("open");
 }
 
@@ -1708,47 +1765,95 @@ function toggleSessionType(type) {
   document.getElementById('log-team-section').style.display   = type === 'teams'   ? '' : 'none';
 }
 
-function openLogModal() {
-  document.getElementById('log-date').value = new Date().toISOString().split('T')[0];
+function openEditSessionModal(id, type) {
+  const session = type === 'team'
+    ? _teamSessions.find(ts => ts.id === id)
+    : _playLog.find(s => s.id === id);
+  if (!session) return;
+  _logEditId   = id;
+  _logEditType = type;
+  openLogModal(session, type);
+}
+
+function openLogModal(session = null, sessionType = null) {
+  const isEdit = !!session;
+  const type   = sessionType || (isEdit ? _logEditType : 'regular') || 'regular';
+
+  document.getElementById('log-modal-title').textContent = isEdit ? 'Edit Session' : 'Log a Session';
+  document.getElementById('log-date').value = isEdit ? session.date : new Date().toISOString().split('T')[0];
 
   // Game dropdown
   const gameSelect = document.getElementById('log-game');
   gameSelect.innerHTML = '<option value="">Select a game…</option>'
     + _gamesLibrary.map(g => `<option value="${g.name}">${g.name}</option>`).join('');
+  if (isEdit) gameSelect.value = session.game;
 
-  // Reset session type to regular
+  // Session type chips
   document.querySelectorAll('#log-type-chips .chip').forEach(c => c.classList.remove('active'));
-  document.querySelector('#log-type-chips .chip[data-type="regular"]').classList.add('active');
-  toggleSessionType('regular');
+  document.querySelector(`#log-type-chips .chip[data-type="${type}"]`).classList.add('active');
+  toggleSessionType(type);
 
-  // Player chips (regular)
-  document.getElementById('log-players').innerHTML = PLAYERS.map(p =>
-    `<button class="chip" data-player="${p}">${p}</button>`).join('');
-  document.getElementById('log-new-player').value = '';
+  if (type === 'team') {
+    // Team chips — pre-select if editing
+    document.getElementById('log-team1').innerHTML = PLAYERS.map(p =>
+      `<button class="chip${isEdit && session.team1.includes(p) ? ' active' : ''}" data-player="${p}">${p}</button>`).join('');
+    document.getElementById('log-team2').innerHTML = PLAYERS.map(p =>
+      `<button class="chip${isEdit && session.team2.includes(p) ? ' active' : ''}" data-player="${p}">${p}</button>`).join('');
+    document.querySelectorAll('#log-winner-chips .chip').forEach(c => {
+      c.classList.toggle('active', isEdit && c.dataset.winner === session.winner);
+    });
+  } else {
+    // Player chips — pre-select if editing
+    const activePlayers = new Set(isEdit ? session.players : []);
+    const knownHTML = PLAYERS.map(p =>
+      `<button class="chip${activePlayers.has(p) ? ' active' : ''}" data-player="${p}">${p}</button>`).join('');
+    const extraHTML = isEdit
+      ? session.players.filter(p => !PLAYERS.includes(p))
+          .map(p => `<button class="chip active" data-player="${p}">${p}</button>`).join('')
+      : '';
+    document.getElementById('log-players').innerHTML = knownHTML + extraHTML;
+    document.getElementById('log-new-player').value = '';
 
-  // Reset result chips
-  document.querySelectorAll('#log-result-chips .chip').forEach(c => c.classList.remove('active'));
-  document.querySelector('#log-result-chips .chip[data-value="competitive"]').classList.add('active');
-  document.getElementById('log-placing-section').style.display = '';
-  updatePlacingDropdowns();
+    // Result chips
+    let resultType = 'competitive';
+    if (isEdit) {
+      if      (session.places[0] === COOP_WIN)  resultType = 'coop_win';
+      else if (session.places[0] === COOP_LOSS) resultType = 'coop_loss';
+      else if (session.places[0] === DNF)       resultType = 'DNF';
+    }
+    document.querySelectorAll('#log-result-chips .chip').forEach(c =>
+      c.classList.toggle('active', c.dataset.value === resultType));
+    document.getElementById('log-placing-section').style.display = resultType === 'competitive' ? '' : 'none';
+    updatePlacingDropdowns();
+    if (isEdit && resultType === 'competitive') {
+      if (session.places[0]) document.getElementById('log-first').value  = session.places[0];
+      if (session.places[1]) document.getElementById('log-second').value = session.places[1];
+      if (session.places[2]) document.getElementById('log-third').value  = session.places[2];
+    }
+  }
 
-  // Team chips
-  const playerChipsHTML = PLAYERS.map(p => `<button class="chip" data-player="${p}">${p}</button>`).join('');
-  document.getElementById('log-team1').innerHTML = playerChipsHTML;
-  document.getElementById('log-team2').innerHTML = playerChipsHTML;
-  document.querySelectorAll('#log-winner-chips .chip').forEach(c => c.classList.remove('active'));
-
-  // Reset duration chips
+  // Duration chips
   document.querySelectorAll('#log-duration-chips .chip').forEach(c => c.classList.remove('active'));
   document.getElementById('log-custom-duration').style.display = 'none';
   document.getElementById('log-custom-hrs').value = '';
   document.getElementById('log-custom-min').value = '';
+  if (isEdit && session.duration) {
+    const match = document.querySelector(`#log-duration-chips .chip[data-mins="${session.duration}"]`);
+    if (match) {
+      match.classList.add('active');
+    } else {
+      document.querySelector('#log-duration-chips .chip[data-mins="other"]').classList.add('active');
+      document.getElementById('log-custom-duration').style.display = '';
+      document.getElementById('log-custom-hrs').value = Math.floor(session.duration / 60) || '';
+      document.getElementById('log-custom-min').value = session.duration % 60 || '';
+    }
+  }
 
-  document.getElementById('log-notes').value = '';
+  document.getElementById('log-notes').value = isEdit ? (session.notes || '') : '';
   document.getElementById('log-feedback').textContent = '';
   const btn = document.getElementById('log-submit');
   btn.disabled = false;
-  btn.textContent = 'Submit Session';
+  btn.textContent = isEdit ? 'Save Changes' : 'Submit Session';
 
   document.getElementById('log-modal-backdrop').classList.add('open');
 }
@@ -1784,8 +1889,10 @@ async function submitSession() {
   if (!game) { logFeedback('Please select a game.', 'err'); return; }
 
   const btn = document.getElementById('log-submit');
+  const isEdit      = !!_logEditId;
+  const submitLabel = isEdit ? 'Save Changes' : 'Submit Session';
   btn.disabled = true;
-  btn.textContent = 'Submitting…';
+  btn.textContent = isEdit ? 'Saving…' : 'Submitting…';
 
   try {
     if (sessionType === 'teams') {
@@ -1794,9 +1901,9 @@ async function submitSession() {
       const winnerChip = document.querySelector('#log-winner-chips .chip.active');
       const winner     = winnerChip?.dataset.winner;
 
-      if (!team1.length) { logFeedback('Please select Team 1 players.', 'err'); btn.disabled = false; btn.textContent = 'Submit Session'; return; }
-      if (!team2.length) { logFeedback('Please select Team 2 players.', 'err'); btn.disabled = false; btn.textContent = 'Submit Session'; return; }
-      if (!winner)       { logFeedback('Please select a winner.', 'err');       btn.disabled = false; btn.textContent = 'Submit Session'; return; }
+      if (!team1.length) { logFeedback('Please select Team 1 players.', 'err'); btn.disabled = false; btn.textContent = submitLabel; return; }
+      if (!team2.length) { logFeedback('Please select Team 2 players.', 'err'); btn.disabled = false; btn.textContent = submitLabel; return; }
+      if (!winner)       { logFeedback('Please select a winner.', 'err');       btn.disabled = false; btn.textContent = submitLabel; return; }
 
       const fields = {
         Date: date, Game: game,
@@ -1806,21 +1913,22 @@ async function submitSession() {
       };
       if (duration > 0) fields['Duration'] = duration;
       if (notes)        fields['Notes']    = notes;
-      await atCreate('Team Log', fields);
+      if (isEdit) { await atUpdate('Team Log', _logEditId, fields); _logEditId = null; _logEditType = null; }
+      else          await atCreate('Team Log', fields);
 
     } else {
       const players    = [...document.querySelectorAll('#log-players .chip.active')].map(c => c.dataset.player);
       const resultChip = document.querySelector('#log-result-chips .chip.active');
       const result     = resultChip ? resultChip.dataset.value : 'competitive';
 
-      if (!players.length) { logFeedback('Please select at least one player.', 'err'); btn.disabled = false; btn.textContent = 'Submit Session'; return; }
+      if (!players.length) { logFeedback('Please select at least one player.', 'err'); btn.disabled = false; btn.textContent = submitLabel; return; }
 
       const fields = { Date: date, Game: game, Players: players.join(', ') };
       if (result === 'competitive') {
         const first  = document.getElementById('log-first').value;
         const second = document.getElementById('log-second').value;
         const third  = document.getElementById('log-third').value;
-        if (!first) { logFeedback('Please select a 1st place winner.', 'err'); btn.disabled = false; btn.textContent = 'Submit Session'; return; }
+        if (!first) { logFeedback('Please select a 1st place winner.', 'err'); btn.disabled = false; btn.textContent = submitLabel; return; }
         fields['1st Place'] = first;
         if (second) fields['2nd Place'] = second;
         if (third)  fields['3rd Place'] = third;
@@ -1829,16 +1937,17 @@ async function submitSession() {
         else if (result === 'coop_loss') { fields['1st Place'] = 'Loss'; }
       if (duration > 0) fields['Duration'] = duration;
       if (notes)        fields['Notes']    = notes;
-      await atCreate('Play Log', fields);
+      if (isEdit) { await atUpdate('Play Log', _logEditId, fields); _logEditId = null; _logEditType = null; }
+      else          await atCreate('Play Log', fields);
     }
 
-    logFeedback('✅ Session logged!', 'ok');
-    btn.textContent = 'Logged!';
+    logFeedback(isEdit ? '✅ Session updated!' : '✅ Session logged!', 'ok');
+    btn.textContent = isEdit ? 'Saved!' : 'Logged!';
     setTimeout(init, 1200);
   } catch (err) {
     logFeedback('⚠ Could not submit — check your connection.', 'err');
     btn.disabled = false;
-    btn.textContent = 'Submit Session';
+    btn.textContent = submitLabel;
   }
 }
 
@@ -1946,8 +2055,16 @@ document.getElementById('log-duration-chips').addEventListener('click', e => {
 
 document.getElementById('log-submit').addEventListener('click', submitSession);
 const logBackdrop = document.getElementById('log-modal-backdrop');
-document.getElementById('log-modal-close').addEventListener('click', () => logBackdrop.classList.remove('open'));
-logBackdrop.addEventListener('click', e => { if (e.target === logBackdrop) logBackdrop.classList.remove('open'); });
+document.getElementById('log-modal-close').addEventListener('click', () => {
+  logBackdrop.classList.remove('open');
+  _logEditId = null; _logEditType = null;
+});
+logBackdrop.addEventListener('click', e => {
+  if (e.target === logBackdrop) {
+    logBackdrop.classList.remove('open');
+    _logEditId = null; _logEditType = null;
+  }
+});
 
 // ── Modal close handlers ──────────────────────────────────────
 const backdrop = document.getElementById("modal-backdrop");
@@ -1960,8 +2077,8 @@ document.addEventListener("keydown", e => {
   if (e.key === "Escape") {
     backdrop.classList.remove("open");
     playerBackdrop.classList.remove("open");
-    logBackdrop.classList.remove("open");
-    agBackdrop.classList.remove("open");
+    logBackdrop.classList.remove("open"); _logEditId = null; _logEditType = null;
+    agBackdrop.classList.remove("open");  _agEditId  = null;
   }
 });
 
@@ -1984,48 +2101,64 @@ document.querySelectorAll(".filter-btn").forEach(btn => {
 });
 
 // ── Add Game Modal ────────────────────────────────────────────
-function openAddGameModal() {
-  ['ag-name','ag-min','ag-max','ag-exp-min','ag-exp-max'].forEach(id => {
-    document.getElementById(id).value = '';
-  });
+function openAddGameModal(game = null) {
+  const isEdit = !!game;
+  _agEditId = isEdit ? game.id : null;
+  document.getElementById('ag-modal-title').textContent = isEdit ? 'Edit Game' : 'Add a Game';
+  document.getElementById('ag-name').value     = isEdit ? game.name                          : '';
+  document.getElementById('ag-min').value      = isEdit && game.min         != null ? game.min         : '';
+  document.getElementById('ag-max').value      = isEdit && game.max         != null ? game.max         : '';
+  document.getElementById('ag-exp-min').value  = isEdit && game.expansionMin != null ? game.expansionMin : '';
+  document.getElementById('ag-exp-max').value  = isEdit && game.expansionMax != null ? game.expansionMax : '';
+  document.getElementById('ag-genre').value    = isEdit ? (game.genre    || '') : '';
+  document.getElementById('ag-bgg-url').value  = isEdit ? (game.bggUrl   || '') : '';
+  document.getElementById('ag-rules-url').value = isEdit ? (game.rulesUrl || '') : '';
   document.getElementById('ag-feedback').textContent = '';
   document.getElementById('ag-owners').innerHTML =
-    PLAYERS.map(p => `<button class="chip" data-owner="${p}">${p}</button>`).join('');
+    PLAYERS.map(p => `<button class="chip${isEdit && game.owners.includes(p) ? ' active' : ''}" data-owner="${p}">${p}</button>`).join('');
   const btn = document.getElementById('ag-submit');
   btn.disabled = false;
-  btn.textContent = 'Add Game';
+  btn.textContent = isEdit ? 'Save Changes' : 'Add Game';
   document.getElementById('add-game-modal-backdrop').classList.add('open');
 }
 
 async function submitNewGame() {
-  const name   = document.getElementById('ag-name').value.trim();
-  const min    = document.getElementById('ag-min').value;
-  const max    = document.getElementById('ag-max').value;
-  const expMin = document.getElementById('ag-exp-min').value;
-  const expMax = document.getElementById('ag-exp-max').value;
-  const owners = [...document.querySelectorAll('#ag-owners .chip.active')].map(c => c.dataset.owner).join(', ');
+  const name     = document.getElementById('ag-name').value.trim();
+  const min      = document.getElementById('ag-min').value;
+  const max      = document.getElementById('ag-max').value;
+  const expMin   = document.getElementById('ag-exp-min').value;
+  const expMax   = document.getElementById('ag-exp-max').value;
+  const owners   = [...document.querySelectorAll('#ag-owners .chip.active')].map(c => c.dataset.owner).join(', ');
+  const genre    = document.getElementById('ag-genre').value.trim();
+  const bggUrl   = document.getElementById('ag-bgg-url').value.trim();
+  const rulesUrl = document.getElementById('ag-rules-url').value.trim();
 
   if (!name)        { agFeedback('Please enter a game name.', 'err'); return; }
   if (!min || !max) { agFeedback('Please enter min and max players.', 'err'); return; }
 
   const fields = { 'Game Name': name, 'Min Players': Number(min), 'Max Players': Number(max) };
-  if (expMin) fields['Expansion Min'] = Number(expMin);
-  if (expMax) fields['Expansion Max'] = Number(expMax);
-  if (owners) fields['Owners'] = owners;
+  if (expMin)   fields['Expansion Min'] = Number(expMin);
+  if (expMax)   fields['Expansion Max'] = Number(expMax);
+  if (owners)   fields['Owners']        = owners;
+  if (genre)    fields['Genre']         = genre;
+  if (bggUrl)   fields['BGG URL']       = bggUrl;
+  if (rulesUrl) fields['Rules URL']     = rulesUrl;
 
+  const isEdit = !!_agEditId;
   const btn = document.getElementById('ag-submit');
   btn.disabled = true;
-  btn.textContent = 'Adding…';
+  btn.textContent = isEdit ? 'Saving…' : 'Adding…';
 
   try {
-    await atCreate('Games Library', fields);
-    agFeedback('✅ Game added!', 'ok');
-    btn.textContent = 'Added!';
+    if (isEdit) { await atUpdate('Games Library', _agEditId, fields); _agEditId = null; }
+    else          await atCreate('Games Library', fields);
+    agFeedback(isEdit ? '✅ Game updated!' : '✅ Game added!', 'ok');
+    btn.textContent = isEdit ? 'Saved!' : 'Added!';
     setTimeout(init, 1200);
   } catch (err) {
     agFeedback('⚠ Could not submit — check your connection.', 'err');
     btn.disabled = false;
-    btn.textContent = 'Add Game';
+    btn.textContent = isEdit ? 'Save Changes' : 'Add Game';
   }
 }
 
@@ -2042,8 +2175,16 @@ document.getElementById('ag-owners').addEventListener('click', e => {
 });
 document.getElementById('ag-submit').addEventListener('click', submitNewGame);
 const agBackdrop = document.getElementById('add-game-modal-backdrop');
-document.getElementById('add-game-modal-close').addEventListener('click', () => agBackdrop.classList.remove('open'));
-agBackdrop.addEventListener('click', e => { if (e.target === agBackdrop) agBackdrop.classList.remove('open'); });
+document.getElementById('add-game-modal-close').addEventListener('click', () => {
+  agBackdrop.classList.remove('open');
+  _agEditId = null;
+});
+agBackdrop.addEventListener('click', e => {
+  if (e.target === agBackdrop) {
+    agBackdrop.classList.remove('open');
+    _agEditId = null;
+  }
+});
 
 // ── Init: cache-first, then refresh from Airtable ────────────
 const CACHE_KEY = "bgn_cache_v3";
