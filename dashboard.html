@@ -1502,37 +1502,42 @@ function openGameModal(game) {
     body.innerHTML = groupAvgHTML + `
       <table><thead><tr>
         <th>Date</th><th>Players</th>
-        <th style="text-align:right">Time</th><th>Result</th>
+        <th style="text-align:right">Time</th>
       </tr></thead><tbody>${allSessions.map(s => {
+        let playersHTML;
         if (s._type === 'team') {
           const t1win = s.winner === 'team1';
           const t2win = s.winner === 'team2';
-          return `
-          <tr>
-            <td style="font-family:'Courier New',monospace;font-size:0.78rem;color:var(--text-muted);white-space:nowrap">${fmtDate(s.date)}</td>
-            <td>
-              <span class="team-tag">Teams</span>
-              <div style="font-size:0.8rem;margin-top:3px;color:var(--text-muted)">${s.team1.join(', ')}</div>
-              <div style="font-size:0.8rem;color:var(--text-muted)">${s.team2.join(', ')}</div>
-            </td>
-            <td style="text-align:right;font-family:'Courier New',monospace;font-size:0.78rem;color:var(--text-muted);white-space:nowrap">${fmtDuration(s.duration)}</td>
-            <td style="font-size:0.82rem">${t1win ? `🥇 ${s.team1.join(', ')}` : t2win ? `🥇 ${s.team2.join(', ')}` : '—'}</td>
-          </tr>
-          ${s.notes ? `<tr style="border-top:none"><td colspan="4" style="padding:0 8px 10px;font-size:0.75rem;color:var(--text-muted);font-style:italic">📝 ${s.notes}</td></tr>` : ""}`;
+          playersHTML = `
+            <span class="team-tag">Teams</span>
+            <div style="margin-top:3px;color:var(--text-muted)">${t1win ? '🥇 ' : ''}${s.team1.join(', ')}</div>
+            <div style="color:var(--text-muted)">${t2win ? '🥇 ' : ''}${s.team2.join(', ')}</div>`;
+        } else if (s.places[0] === COOP_WIN) {
+          playersHTML = s.players.map(p => `<div style="color:var(--text-muted)">${p}</div>`).join('')
+            + `<div style="color:var(--accent-bright);font-size:0.8rem;margin-top:2px">🎉 Co-op win</div>`;
+        } else if (s.places[0] === COOP_LOSS) {
+          playersHTML = s.players.map(p => `<div style="color:var(--text-muted)">${p}</div>`).join('')
+            + `<div style="color:var(--red);font-size:0.8rem;margin-top:2px">Co-op loss</div>`;
+        } else if (s.places[0] === DNF) {
+          playersHTML = s.players.map(p => `<div style="color:var(--text-muted)">${p}</div>`).join('')
+            + `<div style="color:var(--text-muted);font-size:0.8rem;margin-top:2px">Did not finish</div>`;
+        } else {
+          const placeMap = {};
+          s.places.forEach((name, i) => { if (MEDALS[i]) placeMap[name] = MEDALS[i]; });
+          const placed   = s.places.slice(0, 3);
+          const unplaced = s.players.filter(p => !placeMap[p]);
+          playersHTML = [
+            ...placed.map((p, i)  => `<div>${MEDALS[i]} ${p}</div>`),
+            ...unplaced.map(p => `<div style="color:var(--text-muted)">${p}</div>`)
+          ].join('');
         }
-        let podium;
-        if (s.places[0] === COOP_WIN)      podium = `<span style="color:var(--accent-bright)">Co-op win</span>`;
-        else if (s.places[0] === COOP_LOSS) podium = `<span style="color:var(--red)">Co-op loss</span>`;
-        else if (s.places[0] === DNF)       podium = `<span style="color:var(--text-muted)">Did not finish</span>`;
-        else podium = s.places.slice(0,3).map((name,i) => `<div style="white-space:nowrap">${MEDALS[i]} ${name}</div>`).join("");
         return `
         <tr>
-          <td style="font-family:'Courier New',monospace;font-size:0.78rem;color:var(--text-muted);white-space:nowrap">${fmtDate(s.date)}</td>
-          <td style="color:var(--text-muted)">${s.players.map(p => `<div>${p}</div>`).join("")}</td>
-          <td style="text-align:right;font-family:'Courier New',monospace;font-size:0.78rem;color:var(--text-muted);white-space:nowrap">${fmtDuration(s.duration)}</td>
-          <td style="font-size:0.82rem">${podium}</td>
+          <td style="font-family:'Courier New',monospace;font-size:0.78rem;color:var(--text-muted);white-space:nowrap;vertical-align:top;padding-top:11px">${fmtDate(s.date)}</td>
+          <td style="vertical-align:top;font-size:0.82rem">${playersHTML}</td>
+          <td style="text-align:right;font-family:'Courier New',monospace;font-size:0.78rem;color:var(--text-muted);white-space:nowrap;vertical-align:top;padding-top:11px">${fmtDuration(s.duration)}</td>
         </tr>
-        ${s.notes ? `<tr style="border-top:none"><td colspan="4" style="padding:0 8px 10px;font-size:0.75rem;color:var(--text-muted);font-style:italic">📝 ${s.notes}</td></tr>` : ""}`;
+        ${s.notes ? `<tr style="border-top:none"><td colspan="3" style="padding:0 8px 10px;font-size:0.75rem;color:var(--text-muted);font-style:italic">📝 ${s.notes}</td></tr>` : ""}`;
       }).join("")}</tbody></table>`;
   }
   document.getElementById("modal-backdrop").classList.add("open");
