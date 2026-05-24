@@ -601,6 +601,71 @@
       margin-top: 3px;
     }
 
+    /* ── Game modal action row (edit + delete at bottom) ── */
+    .modal-action-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-top: 20px;
+      padding-top: 16px;
+      border-top: 1px solid var(--border);
+    }
+    .modal-action-edit {
+      background: none;
+      border: 1px solid var(--border-hi);
+      color: var(--text-muted);
+      font-size: 0.75rem;
+      font-family: 'Courier New', monospace;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      padding: 7px 14px;
+      border-radius: 2px;
+      cursor: pointer;
+      transition: background 0.15s, color 0.15s, border-color 0.15s;
+    }
+    .modal-action-edit:hover { color: var(--accent-bright); border-color: var(--accent); background: rgba(192,122,56,0.08); }
+    .modal-action-delete {
+      background: none;
+      border: 1px solid transparent;
+      color: var(--text-muted);
+      font-size: 0.75rem;
+      font-family: 'Courier New', monospace;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      padding: 7px 14px;
+      border-radius: 2px;
+      cursor: pointer;
+      opacity: 0.55;
+      transition: background 0.15s, color 0.15s, border-color 0.15s, opacity 0.15s;
+    }
+    .modal-action-delete:hover { color: var(--red); border-color: var(--red); opacity: 1; background: rgba(160,72,64,0.08); }
+    .modal-action-delete.armed { background: var(--red); color: #fff; border-color: var(--red); opacity: 1; }
+
+    /* ── Delete record button (inside form modals) ── */
+    .delete-record-row {
+      display: flex;
+      justify-content: center;
+      margin-top: 12px;
+      padding-top: 12px;
+      border-top: 1px solid var(--border);
+    }
+    .delete-record-btn {
+      background: none;
+      border: none;
+      color: var(--text-muted);
+      font-size: 0.75rem;
+      font-family: 'Courier New', monospace;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      padding: 6px 12px;
+      cursor: pointer;
+      opacity: 0.5;
+      transition: color 0.15s, opacity 0.15s;
+      border-radius: 2px;
+    }
+    .delete-record-btn:hover { color: var(--red); opacity: 1; }
+    .delete-record-btn.armed { color: var(--red); opacity: 1; font-weight: bold; }
+
     /* ── Group size avg row ── */
     .group-avg-row {
       display: flex;
@@ -930,7 +995,6 @@
         <div class="modal-genre" id="modal-genre"></div>
       </div>
       <div style="display:flex;align-items:center;gap:8px;flex-shrink:0">
-        <button class="add-game-btn" id="modal-edit-game-btn">Edit</button>
         <a class="modal-rules-btn" id="modal-bgg-btn" href="#" target="_blank" rel="noopener">BGG ↗</a>
         <a class="modal-rules-btn" id="modal-rules-btn" href="#" target="_blank" rel="noopener">Rules ↗</a>
         <button class="modal-close" id="modal-close">✕</button>
@@ -1055,6 +1119,9 @@
 
       <button class="log-submit-btn" id="log-submit">Submit Session</button>
       <div class="log-feedback" id="log-feedback"></div>
+      <div class="delete-record-row" id="log-delete-row" style="display:none">
+        <button class="delete-record-btn" id="log-delete-btn">Delete session</button>
+      </div>
     </div>
   </div>
 </div>
@@ -1175,6 +1242,14 @@ async function atUpdate(table, recordId, fields) {
   const res  = await fetch(`${AT_URL}/${encodeURIComponent(table)}/${recordId}`, {
     method: "PATCH", headers: AT_HDR,
     body: JSON.stringify({ fields })
+  });
+  const data = await res.json();
+  if (data.error) throw new Error(data.error.message);
+  return data;
+}
+async function atDelete(table, recordId) {
+  const res  = await fetch(`${AT_URL}/${encodeURIComponent(table)}/${recordId}`, {
+    method: "DELETE", headers: AT_HDR
   });
   const data = await res.json();
   if (data.error) throw new Error(data.error.message);
@@ -1682,10 +1757,46 @@ function openGameModal(game) {
         ${s.notes ? `<tr style="border-top:none"><td colspan="4" style="padding:0 8px 10px;font-size:0.75rem;color:var(--text-muted);font-style:italic">📝 ${s.notes}</td></tr>` : ""}`;
       }).join("")}</tbody></table>`;
   }
+  // ── Action row: Edit + Delete ──
+  const actionRow = document.createElement("div");
+  actionRow.className = "modal-action-row";
+  actionRow.innerHTML = `
+    <button class="modal-action-edit" id="modal-edit-game-btn">✏ Edit game</button>
+    <button class="modal-action-delete" id="modal-delete-game-btn">Delete game</button>`;
+  body.appendChild(actionRow);
+
   document.getElementById("modal-edit-game-btn").onclick = () => {
     document.getElementById("modal-backdrop").classList.remove("open");
     openAddGameModal(game);
   };
+
+  document.getElementById("modal-delete-game-btn").onclick = (e) => {
+    const btn = e.currentTarget;
+    if (btn.dataset.armed === "1") {
+      btn.textContent = "Deleting…";
+      btn.disabled = true;
+      atDelete("Games Library", game.id).then(() => {
+        document.getElementById("modal-backdrop").classList.remove("open");
+        init();
+      }).catch(() => {
+        btn.textContent = "Error — try again";
+        btn.disabled = false;
+        btn.dataset.armed = "";
+        btn.classList.remove("armed");
+      });
+    } else {
+      btn.dataset.armed = "1";
+      btn.classList.add("armed");
+      btn.textContent = "⚠ Confirm delete";
+      clearTimeout(btn._resetTimer);
+      btn._resetTimer = setTimeout(() => {
+        btn.dataset.armed = "";
+        btn.classList.remove("armed");
+        btn.textContent = "Delete game";
+      }, 3000);
+    }
+  };
+
   document.getElementById("modal-backdrop").classList.add("open");
 }
 
@@ -1854,6 +1965,47 @@ function openLogModal(session = null, sessionType = null) {
   const btn = document.getElementById('log-submit');
   btn.disabled = false;
   btn.textContent = isEdit ? 'Save Changes' : 'Submit Session';
+
+  // Delete row — only visible when editing
+  const deleteRow = document.getElementById('log-delete-row');
+  const deleteBtn = document.getElementById('log-delete-btn');
+  deleteRow.style.display = isEdit ? '' : 'none';
+  deleteBtn.textContent = 'Delete session';
+  deleteBtn.classList.remove('armed');
+  deleteBtn.dataset.armed = '';
+  clearTimeout(deleteBtn._resetTimer);
+  deleteBtn.onclick = null;
+  if (isEdit) {
+    const editId   = _logEditId;
+    const editType = _logEditType;
+    deleteBtn.onclick = (e) => {
+      if (deleteBtn.dataset.armed === '1') {
+        deleteBtn.textContent = 'Deleting…';
+        deleteBtn.disabled = true;
+        const table = editType === 'team' ? 'Team Log' : 'Play Log';
+        atDelete(table, editId).then(() => {
+          _logEditId = null; _logEditType = null;
+          document.getElementById('log-modal-backdrop').classList.remove('open');
+          init();
+        }).catch(() => {
+          deleteBtn.textContent = 'Error — try again';
+          deleteBtn.disabled = false;
+          deleteBtn.dataset.armed = '';
+          deleteBtn.classList.remove('armed');
+        });
+      } else {
+        deleteBtn.dataset.armed = '1';
+        deleteBtn.classList.add('armed');
+        deleteBtn.textContent = '⚠ Confirm delete';
+        clearTimeout(deleteBtn._resetTimer);
+        deleteBtn._resetTimer = setTimeout(() => {
+          deleteBtn.dataset.armed = '';
+          deleteBtn.classList.remove('armed');
+          deleteBtn.textContent = 'Delete session';
+        }, 3000);
+      }
+    };
+  }
 
   document.getElementById('log-modal-backdrop').classList.add('open');
 }
@@ -2055,16 +2207,16 @@ document.getElementById('log-duration-chips').addEventListener('click', e => {
 
 document.getElementById('log-submit').addEventListener('click', submitSession);
 const logBackdrop = document.getElementById('log-modal-backdrop');
-document.getElementById('log-modal-close').addEventListener('click', () => {
+function closeLogModal() {
   logBackdrop.classList.remove('open');
   _logEditId = null; _logEditType = null;
-});
-logBackdrop.addEventListener('click', e => {
-  if (e.target === logBackdrop) {
-    logBackdrop.classList.remove('open');
-    _logEditId = null; _logEditType = null;
-  }
-});
+  const deleteBtn = document.getElementById('log-delete-btn');
+  clearTimeout(deleteBtn._resetTimer);
+  deleteBtn.dataset.armed = ''; deleteBtn.classList.remove('armed');
+  deleteBtn.textContent = 'Delete session'; deleteBtn.disabled = false;
+}
+document.getElementById('log-modal-close').addEventListener('click', closeLogModal);
+logBackdrop.addEventListener('click', e => { if (e.target === logBackdrop) closeLogModal(); });
 
 // ── Modal close handlers ──────────────────────────────────────
 const backdrop = document.getElementById("modal-backdrop");
@@ -2077,8 +2229,8 @@ document.addEventListener("keydown", e => {
   if (e.key === "Escape") {
     backdrop.classList.remove("open");
     playerBackdrop.classList.remove("open");
-    logBackdrop.classList.remove("open"); _logEditId = null; _logEditType = null;
-    agBackdrop.classList.remove("open");  _agEditId  = null;
+    closeLogModal();
+    agBackdrop.classList.remove("open"); _agEditId = null;
   }
 });
 
