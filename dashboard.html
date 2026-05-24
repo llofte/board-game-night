@@ -1530,22 +1530,6 @@ function renderCatalog() {
     faveBtn.className = "game-fave-btn" + (game.favorite ? " active" : "");
     faveBtn.dataset.gameId = game.id;
     faveBtn.textContent = "★";
-    faveBtn.addEventListener("click", function(e) {
-      e.stopPropagation();
-      e.preventDefault();
-      game.favorite = !game.favorite;
-      _pendingFavorites[game.id] = game.favorite;
-      // Query the live DOM element in case the closure ref is stale
-      const liveBtn = catalogGrid.querySelector(`.game-fave-btn[data-game-id="${game.id}"]`);
-      if (liveBtn) {
-        liveBtn.classList[game.favorite ? 'add' : 'remove']('active');
-        liveBtn.style.color = game.favorite ? 'var(--accent-bright)' : '';
-      }
-      atUpdate('Games Library', game.id, { Favorite: game.favorite })
-        .then(() => { delete _pendingFavorites[game.id]; })
-        .catch(() => { /* save failed — visual state stays; _pendingFavorites survives re-renders */ });
-      localStorage.removeItem(CACHE_KEY);
-    });
 
     header.appendChild(nameDiv);
     header.appendChild(faveBtn);
@@ -1566,6 +1550,24 @@ function renderCatalog() {
     catalogGrid.appendChild(card);
   });
 }
+
+// ── Star toggle — document capture so nothing can block it ────
+document.addEventListener('click', function(e) {
+  const btn = e.target.closest('.game-fave-btn');
+  if (!btn || !btn.dataset.gameId) return;
+  e.stopPropagation();
+  e.preventDefault();
+  const game = _gamesLibrary.find(g => g.id === btn.dataset.gameId);
+  if (!game) return;
+  game.favorite = !game.favorite;
+  _pendingFavorites[game.id] = game.favorite;
+  btn.classList[game.favorite ? 'add' : 'remove']('active');
+  btn.style.color = game.favorite ? '#e09040' : '#3a4558';
+  atUpdate('Games Library', game.id, { Favorite: game.favorite })
+    .then(() => { delete _pendingFavorites[game.id]; })
+    .catch(() => {});
+  localStorage.removeItem(CACHE_KEY);
+}, true); // true = capture phase, fires before anything else
 
 // ── Main render ───────────────────────────────────────────────
 function renderDashboard(gamesLibrary, playLog, expansions, teamSessions) {
