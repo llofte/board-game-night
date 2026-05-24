@@ -242,7 +242,7 @@
       border: 1px solid var(--border);
       border-left: 2px solid var(--accent-dim);
       border-radius: 2px;
-      padding: 11px 44px 11px 14px;
+      padding: 11px 56px 11px 14px;
       cursor: pointer;
       position: relative;
       transition: border-left-color 0.15s, background 0.15s;
@@ -1019,16 +1019,12 @@
 <div class="modal-backdrop" id="modal-backdrop">
   <div class="modal">
     <div class="modal-header">
-      <div>
+      <div style="flex:1;min-width:0">
         <div class="modal-title" id="modal-title"></div>
         <div class="modal-subtitle" id="modal-subtitle"></div>
-        <div class="modal-genre" id="modal-genre"></div>
+        <div id="modal-links" style="display:flex;gap:6px;margin-top:8px;flex-wrap:wrap"></div>
       </div>
-      <div style="display:flex;align-items:center;gap:8px;flex-shrink:0">
-        <a class="modal-rules-btn" id="modal-bgg-btn" href="#" target="_blank" rel="noopener">BGG ↗</a>
-        <a class="modal-rules-btn" id="modal-rules-btn" href="#" target="_blank" rel="noopener">Rules ↗</a>
-        <button class="modal-close" id="modal-close">✕</button>
-      </div>
+      <button class="modal-close" id="modal-close">✕</button>
     </div>
     <div class="modal-stats" id="modal-stats"></div>
     <div class="modal-owners" id="modal-owners"></div>
@@ -1205,11 +1201,6 @@
       </div>
 
       <div class="form-section">
-        <label class="form-label">Genre <span style="color:var(--border-hi);font-size:0.85em">(optional)</span></label>
-        <input type="text" class="form-input" id="ag-genre" placeholder="e.g. Worker Placement" autocomplete="off" />
-      </div>
-
-      <div class="form-section">
         <label class="form-label">BGG URL <span style="color:var(--border-hi);font-size:0.85em">(optional)</span></label>
         <input type="url" class="form-input" id="ag-bgg-url" placeholder="https://boardgamegeek.com/boardgame/…" />
       </div>
@@ -1217,6 +1208,11 @@
       <div class="form-section">
         <label class="form-label">Rules URL <span style="color:var(--border-hi);font-size:0.85em">(optional)</span></label>
         <input type="url" class="form-input" id="ag-rules-url" placeholder="https://…" />
+      </div>
+
+      <div class="form-section">
+        <label class="form-label">Tutorial URL <span style="color:var(--border-hi);font-size:0.85em">(optional)</span></label>
+        <input type="url" class="form-input" id="ag-tutorial-url" placeholder="https://youtube.com/…" />
       </div>
 
       <button class="log-submit-btn" id="ag-submit">Add Game</button>
@@ -1298,9 +1294,10 @@ function parseGame(r) {
     expansionMin: f["Expansion Min"] ?? null,
     expansionMax: f["Expansion Max"] ?? null,
     owners:       f["Owners"] ? f["Owners"].split(",").map(s => s.trim()) : [],
-    genre:        f["Genre"]    || null,
-    rulesUrl:     f["Rules URL"] || null,
-    bggUrl:       f["BGG URL"]  || null
+    genre:        f["Genre"]        || null,
+    rulesUrl:     f["Rules URL"]   || null,
+    bggUrl:       f["BGG URL"]     || null,
+    tutorialUrl:  f["Tutorial URL"]|| null
   };
 }
 function parseSession(r) {
@@ -1719,19 +1716,11 @@ function openGameModal(game) {
   const expCounts = expansionRange(game);
   const expLine = expCounts.length ? `<br>${formatCountsDisplay(expCounts)} w/ expansion` : "";
   document.getElementById("modal-subtitle").innerHTML = `${game.min}–${game.max} players${expLine}`;
-  const genreEl = document.getElementById("modal-genre");
-  genreEl.textContent = game.genre ?? "";
-  genreEl.style.display = game.genre ? "" : "none";
   const bggUrl = game.bggUrl || `https://boardgamegeek.com/search/boardgame?q=${encodeURIComponent(game.name)}`;
-  const bggBtn = document.getElementById("modal-bgg-btn");
-  bggBtn.href = bggUrl;
-  bggBtn.onclick = e => { e.preventDefault(); window.open(bggUrl, '_blank', 'noopener'); };
-  const rulesBtn = document.getElementById("modal-rules-btn");
-  if (game.rulesUrl) {
-    rulesBtn.href = game.rulesUrl;
-    rulesBtn.style.display = "";
-    rulesBtn.onclick = e => { e.preventDefault(); window.open(game.rulesUrl, '_blank', 'noopener'); };
-  } else { rulesBtn.style.display = "none"; }
+  document.getElementById("modal-links").innerHTML =
+    `<a class="modal-rules-btn" href="${bggUrl}" onclick="event.preventDefault();window.open('${bggUrl}','_blank','noopener')">BGG ↗</a>`
+    + (game.rulesUrl ? `<a class="modal-rules-btn" href="${game.rulesUrl}" onclick="event.preventDefault();window.open('${game.rulesUrl}','_blank','noopener')">Rules ↗</a>` : '')
+    + (game.tutorialUrl ? `<a class="modal-rules-btn" href="${game.tutorialUrl}" onclick="event.preventDefault();window.open('${game.tutorialUrl}','_blank','noopener')">Tutorial ↗</a>` : '');
   const ownersEl = document.getElementById("modal-owners");
   if (game.owners && game.owners.length > 0) {
     ownersEl.style.display = "";
@@ -1882,7 +1871,7 @@ function openPlayerModal(name) {
   ].sort((a, b) => b.date.localeCompare(a.date));
   body.innerHTML = `
     <table><thead><tr>
-      <th>Date</th><th>Game</th><th style="text-align:right">Finish</th>
+      <th>Date</th><th>Game</th><th style="text-align:right">Result</th>
     </tr></thead><tbody>${allPlayerSessions.map(s => {
       if (s._type === 'team') {
         const won = (s.winner === 'team1' && s.team1.includes(name)) || (s.winner === 'team2' && s.team2.includes(name));
@@ -1904,11 +1893,11 @@ function openPlayerModal(name) {
         const idx = s.places.indexOf(name);
         finish = idx >= 0
           ? `${MEDALS[idx]} ${idx === 0 ? "1st" : idx === 1 ? "2nd" : "3rd"}`
-          : `<span style="color:var(--text-muted)">—</span>`;
+          : `<span style="color:var(--text-muted)">0</span>`;
       }
       return `
       <tr>
-        <td style="font-family:'Courier New',monospace;font-size:0.9rem;color:var(--text-muted)">${fmtDate(s.date)}</td>
+        <td style="font-family:'Courier New',monospace;font-size:0.9rem;color:var(--text-muted);vertical-align:top;white-space:nowrap">${fmtDateTwoLine(s.date)}</td>
         <td>
           <div>${s.game}</div>
           <div style="font-size:0.9rem;color:var(--text-muted);margin-top:2px">${s.players.filter(p => p !== name).join(", ")}</div>
@@ -2340,9 +2329,9 @@ function openAddGameModal(game = null) {
   document.getElementById('ag-max').value      = isEdit && game.max         != null ? game.max         : '';
   document.getElementById('ag-exp-min').value  = isEdit && game.expansionMin != null ? game.expansionMin : '';
   document.getElementById('ag-exp-max').value  = isEdit && game.expansionMax != null ? game.expansionMax : '';
-  document.getElementById('ag-genre').value    = isEdit ? (game.genre    || '') : '';
-  document.getElementById('ag-bgg-url').value  = isEdit ? (game.bggUrl   || '') : '';
-  document.getElementById('ag-rules-url').value = isEdit ? (game.rulesUrl || '') : '';
+  document.getElementById('ag-bgg-url').value      = isEdit ? (game.bggUrl      || '') : '';
+  document.getElementById('ag-rules-url').value    = isEdit ? (game.rulesUrl    || '') : '';
+  document.getElementById('ag-tutorial-url').value = isEdit ? (game.tutorialUrl || '') : '';
   document.getElementById('ag-feedback').textContent = '';
   document.getElementById('ag-owners').innerHTML =
     PLAYERS.map(p => `<button class="chip${isEdit && game.owners.includes(p) ? ' active' : ''}" data-owner="${p}">${p}</button>`).join('');
@@ -2358,21 +2347,21 @@ async function submitNewGame() {
   const max      = document.getElementById('ag-max').value;
   const expMin   = document.getElementById('ag-exp-min').value;
   const expMax   = document.getElementById('ag-exp-max').value;
-  const owners   = [...document.querySelectorAll('#ag-owners .chip.active')].map(c => c.dataset.owner).join(', ');
-  const genre    = document.getElementById('ag-genre').value.trim();
-  const bggUrl   = document.getElementById('ag-bgg-url').value.trim();
-  const rulesUrl = document.getElementById('ag-rules-url').value.trim();
+  const owners      = [...document.querySelectorAll('#ag-owners .chip.active')].map(c => c.dataset.owner).join(', ');
+  const bggUrl      = document.getElementById('ag-bgg-url').value.trim();
+  const rulesUrl    = document.getElementById('ag-rules-url').value.trim();
+  const tutorialUrl = document.getElementById('ag-tutorial-url').value.trim();
 
   if (!name)        { agFeedback('Please enter a game name.', 'err'); return; }
   if (!min || !max) { agFeedback('Please enter min and max players.', 'err'); return; }
 
   const fields = { 'Game Name': name, 'Min Players': Number(min), 'Max Players': Number(max) };
-  if (expMin)   fields['Expansion Min'] = Number(expMin);
-  if (expMax)   fields['Expansion Max'] = Number(expMax);
-  if (owners)   fields['Owners']        = owners;
-  if (genre)    fields['Genre']         = genre;
-  if (bggUrl)   fields['BGG URL']       = bggUrl;
-  if (rulesUrl) fields['Rules URL']     = rulesUrl;
+  if (expMin)       fields['Expansion Min'] = Number(expMin);
+  if (expMax)       fields['Expansion Max'] = Number(expMax);
+  if (owners)       fields['Owners']        = owners;
+  if (bggUrl)       fields['BGG URL']       = bggUrl;
+  if (rulesUrl)     fields['Rules URL']     = rulesUrl;
+  if (tutorialUrl)  fields['Tutorial URL']  = tutorialUrl;
 
   const isEdit = !!_agEditId;
   const btn = document.getElementById('ag-submit');
