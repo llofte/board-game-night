@@ -1703,7 +1703,7 @@ function renderDashboard(gamesLibrary, playLog, expansions, teamSessions) {
       const t1win = s.winner === 'team1';
       const t2win = s.winner === 'team2';
       sessionList.innerHTML += `
-        <div class="session" data-game="${s.game}" data-session-id="${s.id}" data-session-type="team">
+        <div class="session" data-game="${s.game}" data-session-id="${s.id}" data-session-type="teams">
           <div class="session-top">
             <span class="session-game">${s.game}</span>
             <span class="session-date">${fmtDate(s.date)}</span>
@@ -1975,7 +1975,7 @@ function toggleSessionType(type) {
 }
 
 function openEditSessionModal(id, type) {
-  const session = type === 'team'
+  const session = type === 'teams'
     ? _teamSessions.find(ts => ts.id === id)
     : _playLog.find(s => s.id === id);
   if (!session) return;
@@ -2081,7 +2081,7 @@ function openLogModal(session = null, sessionType = null) {
       if (deleteBtn.dataset.armed === '1') {
         deleteBtn.textContent = 'Deleting…';
         deleteBtn.disabled = true;
-        const table = editType === 'team' ? 'Team Log' : 'Play Log';
+        const table = editType === 'teams' ? 'Team Log' : 'Play Log';
         atDelete(table, editId).then(() => {
           _logEditId = null; _logEditType = null;
           closeLogModal();
@@ -2342,7 +2342,7 @@ document.getElementById("session-list").addEventListener("click", e => {
 });
 
 function openSessionActionSheet(sessionId, sessionType, gameName) {
-  const session = sessionType === 'team'
+  const session = sessionType === 'teams'
     ? _teamSessions.find(ts => ts.id === sessionId)
     : _playLog.find(s => s.id === sessionId);
   if (!session) return;
