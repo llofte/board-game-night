@@ -250,7 +250,7 @@
     .session-footer {
       display: flex;
       justify-content: flex-end;
-      align-items: center;
+      align-items: flex-end;
       margin-top: 6px;
       gap: 8px;
     }
@@ -1730,11 +1730,16 @@ function openGameModal(game) {
   const genreEl = document.getElementById("modal-genre");
   genreEl.textContent = game.genre ?? "";
   genreEl.style.display = game.genre ? "" : "none";
-  document.getElementById("modal-bgg-btn").href =
-    game.bggUrl || `https://boardgamegeek.com/search/boardgame?q=${encodeURIComponent(game.name)}`;
+  const bggUrl = game.bggUrl || `https://boardgamegeek.com/search/boardgame?q=${encodeURIComponent(game.name)}`;
+  const bggBtn = document.getElementById("modal-bgg-btn");
+  bggBtn.href = bggUrl;
+  bggBtn.onclick = e => { e.preventDefault(); window.open(bggUrl, '_blank', 'noopener'); };
   const rulesBtn = document.getElementById("modal-rules-btn");
-  if (game.rulesUrl) { rulesBtn.href = game.rulesUrl; rulesBtn.style.display = ""; }
-  else { rulesBtn.style.display = "none"; }
+  if (game.rulesUrl) {
+    rulesBtn.href = game.rulesUrl;
+    rulesBtn.style.display = "";
+    rulesBtn.onclick = e => { e.preventDefault(); window.open(game.rulesUrl, '_blank', 'noopener'); };
+  } else { rulesBtn.style.display = "none"; }
   const ownersEl = document.getElementById("modal-owners");
   if (game.owners && game.owners.length > 0) {
     ownersEl.style.display = "";
