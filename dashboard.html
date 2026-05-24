@@ -1809,12 +1809,17 @@ function openGameModal(game) {
     + (game.tutorialUrl ? `<a class="modal-rules-btn" href="${game.tutorialUrl}" onclick="event.preventDefault();window.open('${game.tutorialUrl}','_blank','noopener')">Tutorial ↗</a>` : '');
   // Wire up after innerHTML so we have a fresh reference
   const modalFaveBtn = document.getElementById("modal-fave-btn");
+  if (game.favorite) modalFaveBtn.style.color = '#e09040';
   modalFaveBtn.onclick = () => {
     game.favorite = !game.favorite;
-    document.getElementById('modal-fave-btn').classList[game.favorite ? 'add' : 'remove']('active');
-    atUpdate("Games Library", game.id, { Favorite: game.favorite });
+    _pendingFavorites[game.id] = game.favorite;
+    const b = document.getElementById('modal-fave-btn');
+    b.classList[game.favorite ? 'add' : 'remove']('active');
+    b.style.color = game.favorite ? '#e09040' : '#3a4558';
+    atUpdate("Games Library", game.id, { Favorite: game.favorite })
+      .then(() => { delete _pendingFavorites[game.id]; })
+      .catch(() => {});
     localStorage.removeItem(CACHE_KEY);
-    // Sort updates on next page load
   };
   const ownersEl = document.getElementById("modal-owners");
   if (game.owners && game.owners.length > 0) {
