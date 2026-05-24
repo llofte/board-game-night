@@ -242,11 +242,17 @@
       border: 1px solid var(--border);
       border-left: 2px solid var(--accent-dim);
       border-radius: 2px;
-      padding: 11px 14px 36px;
+      padding: 11px 14px;
       cursor: pointer;
-      position: relative;
       transition: border-left-color 0.15s, background 0.15s;
       -webkit-tap-highlight-color: transparent;
+    }
+    .session-footer {
+      display: flex;
+      justify-content: flex-end;
+      align-items: center;
+      margin-top: 6px;
+      gap: 8px;
     }
     .session:hover {
       border-left-color: var(--accent);
@@ -538,9 +544,7 @@
 
     /* ── Session edit button (per-card, bottom-right) ── */
     .session-edit-btn {
-      position: absolute;
-      bottom: 8px;
-      right: 10px;
+      flex-shrink: 0;
       background: none;
       border: 1px solid var(--border);
       color: var(--text-muted);
@@ -1110,6 +1114,7 @@
           <div class="chip-group" id="log-winner-chips">
             <button class="chip" data-winner="team1">Team 1</button>
             <button class="chip" data-winner="team2">Team 2</button>
+            <button class="chip" data-winner="dnf">DNF</button>
           </div>
         </div>
       </div>
@@ -1662,8 +1667,10 @@ function renderDashboard(gamesLibrary, playLog, expansions, teamSessions) {
             <span class="team-label${t2win ? ' winner' : ''}">${s.team2.join(', ')}</span>
           </div>
           ${hasScore ? `<div class="session-score">${s.team1score} – ${s.team2score}</div>` : ''}
-          ${s.notes ? `<div class="session-notes">${s.notes}</div>` : ''}
-          <button class="session-edit-btn" data-session-id="${s.id}" data-session-type="teams"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M17 3a2.828 2.828 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5L17 3z"/></svg></button>
+          <div class="session-footer">
+            ${s.notes ? `<span class="session-notes" style="margin:0;flex:1">${s.notes}</span>` : ''}
+            <button class="session-edit-btn" data-session-id="${s.id}" data-session-type="teams"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M17 3a2.828 2.828 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5L17 3z"/></svg></button>
+          </div>
         </div>`;
     } else {
       sessionList.innerHTML += `
@@ -1674,8 +1681,10 @@ function renderDashboard(gamesLibrary, playLog, expansions, teamSessions) {
           </div>
           <div class="session-players">${s.players.join(", ")}</div>
           <div class="session-podium">${buildPodiumHTML(s)}</div>
-          ${s.notes ? `<div class="session-notes">${s.notes}</div>` : ""}
-          <button class="session-edit-btn" data-session-id="${s.id}" data-session-type="regular"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M17 3a2.828 2.828 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5L17 3z"/></svg></button>
+          <div class="session-footer">
+            ${s.notes ? `<span class="session-notes" style="margin:0;flex:1">${s.notes}</span>` : ''}
+            <button class="session-edit-btn" data-session-id="${s.id}" data-session-type="regular"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M17 3a2.828 2.828 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5L17 3z"/></svg></button>
+          </div>
         </div>`;
     }
   });
@@ -1785,7 +1794,7 @@ function openGameModal(game) {
               <div style="color:var(--text-muted)">${s.team2.join(', ')}</div>
             </td>
             <td style="text-align:right;font-family:'Courier New',monospace;font-size:0.9rem;color:var(--text-muted);vertical-align:top">${fmtDurationTwoLine(s.duration)}</td>
-            <td style="font-size:0.9rem;vertical-align:top">${t1win ? `🥇 Team 1<div style="color:var(--text-muted);margin-top:2px">${s.team1.join(', ')}</div>` : t2win ? `🥇 Team 2<div style="color:var(--text-muted);margin-top:2px">${s.team2.join(', ')}</div>` : '—'}</td>
+            <td style="font-size:0.9rem;vertical-align:top">${t1win ? `🥇 Team 1<div style="color:var(--text-muted);margin-top:2px">${s.team1.join(', ')}</div>` : t2win ? `🥇 Team 2<div style="color:var(--text-muted);margin-top:2px">${s.team2.join(', ')}</div>` : s.winner === 'dnf' ? `<span style="color:#8a9298">DNF</span>` : '—'}</td>
           </tr>
           ${s.notes ? `<tr style="border-top:none"><td colspan="4" style="padding:0 8px 10px;font-size:0.9rem;color:var(--text-muted);font-style:italic">${s.notes}</td></tr>` : ""}`;
         }
@@ -1882,12 +1891,12 @@ function openPlayerModal(name) {
         const won = (s.winner === 'team1' && s.team1.includes(name)) || (s.winner === 'team2' && s.team2.includes(name));
         return `
         <tr>
-          <td style="font-family:'Courier New',monospace;font-size:0.9rem;color:var(--text-muted);white-space:nowrap">${fmtDate(s.date)}</td>
+          <td style="font-family:'Courier New',monospace;font-size:0.9rem;color:var(--text-muted);vertical-align:top;white-space:nowrap">${fmtDateTwoLine(s.date)}</td>
           <td>
             <div>${s.game}</div>
             <div style="font-size:0.9rem;color:var(--text-muted);margin-top:2px">${[...s.team1, ...s.team2].filter(p => p !== name).join(', ')}</div>
           </td>
-          <td style="text-align:right;font-size:0.9rem;white-space:nowrap">${won ? '🥇 Team win' : '<span style="color:var(--text-muted)">Team loss</span>'}</td>
+          <td style="text-align:right;font-size:0.9rem;white-space:nowrap">${s.winner === 'dnf' ? '<span style="color:#8a9298">Team DNF</span>' : won ? '🥇 Team win' : '<span style="color:var(--text-muted)">Team loss</span>'}</td>
         </tr>`;
       }
       let finish;
@@ -2103,13 +2112,13 @@ async function submitSession() {
 
       if (!team1.length) { logFeedback('Please select Team 1 players.', 'err'); btn.disabled = false; btn.textContent = submitLabel; return; }
       if (!team2.length) { logFeedback('Please select Team 2 players.', 'err'); btn.disabled = false; btn.textContent = submitLabel; return; }
-      if (!winner)       { logFeedback('Please select a winner.', 'err');       btn.disabled = false; btn.textContent = submitLabel; return; }
+      if (!winner)       { logFeedback('Please select a winner or DNF.', 'err'); btn.disabled = false; btn.textContent = submitLabel; return; }
 
       const fields = {
         Date: date, Game: game,
         'Team 1': team1.join(', '),
         'Team 2': team2.join(', '),
-        Winner: winner === 'team1' ? 'Team 1' : 'Team 2'
+        Winner: winner === 'team1' ? 'Team 1' : winner === 'team2' ? 'Team 2' : 'DNF'
       };
       if (duration > 0) fields['Duration'] = duration;
       fields['Notes'] = notes || null;
@@ -2411,7 +2420,7 @@ agBackdrop.addEventListener('click', e => {
 });
 
 // ── Init: cache-first, then refresh from Airtable ────────────
-const CACHE_KEY = "bgn_cache_v3";
+const CACHE_KEY = "bgn_cache_v4";
 
 async function init() {
   const statusEl = document.getElementById("data-status");
