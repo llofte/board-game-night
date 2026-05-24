@@ -228,7 +228,7 @@
     /* ── Games chart ── */
     .chart-wrap {
       position: relative;
-      height: 240px;
+      min-height: 200px;
     }
 
     /* ── Recent sessions ── */
@@ -725,8 +725,7 @@
       table { font-size: 0.9rem; }
       thead th { font-size: 0.9rem; }
 
-      /* Chart */
-      .chart-wrap { height: 200px; }
+
 
       /* Recent sessions */
       .session-game { font-size: 0.96rem; }
@@ -1584,7 +1583,9 @@ function renderDashboard(gamesLibrary, playLog, expansions, teamSessions) {
       </tr>`;
   });
 
-  // Chart
+  // Chart — size dynamically so all bars have room
+  const chartWrap = document.querySelector(".chart-wrap");
+  chartWrap.style.height = Math.max(200, sortedGames.length * 20 + 16) + "px";
   if (_chart) _chart.destroy();
   const ctx = document.getElementById("games-chart").getContext("2d");
   _chart = new Chart(ctx, {
@@ -1619,6 +1620,7 @@ function renderDashboard(gamesLibrary, playLog, expansions, teamSessions) {
     },
     options: {
       indexAxis: "y",
+      maintainAspectRatio: false,
       layout: { padding: { right: 28 } },
       plugins: {
         legend: { display: false },
