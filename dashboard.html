@@ -205,9 +205,8 @@
 
     .pts-legend {
       display: flex;
-      flex-wrap: wrap;
-      align-items: center;
-      gap: 4px 12px;
+      flex-direction: column;
+      gap: 4px;
       margin-top: 12px;
       padding-top: 10px;
       border-top: 1px solid var(--border);
@@ -215,10 +214,6 @@
       font-family: 'Courier New', monospace;
       color: var(--text-muted);
       letter-spacing: 0.06em;
-    }
-    .pts-legend-title {
-      color: var(--accent);
-      margin-right: 2px;
     }
     .player-link {
       cursor: pointer;
@@ -247,8 +242,9 @@
       border: 1px solid var(--border);
       border-left: 2px solid var(--accent-dim);
       border-radius: 2px;
-      padding: 11px 14px;
+      padding: 11px 14px 36px;
       cursor: pointer;
+      position: relative;
       transition: border-left-color 0.15s, background 0.15s;
       -webkit-tap-highlight-color: transparent;
     }
@@ -540,67 +536,25 @@
     .exp-unowned { color: var(--border-hi); }
     .exp-owner   { font-size: 0.9rem; color: var(--text-muted); margin-left: 2px; }
 
-    /* ── Session action sheet ── */
-    .session-action-sheet {
-      background: var(--surface);
-      border: 1px solid var(--border-hi);
-      border-radius: 4px;
-      width: 100%;
-      max-width: 420px;
-      overflow: hidden;
-    }
-    .session-action-info {
-      padding: 16px 20px 14px;
-      border-bottom: 1px solid var(--border);
-      background: var(--bg);
-    }
-    .session-action-game {
-      font-size: 1.05rem;
-      color: var(--accent-bright);
-    }
-    .session-action-detail {
-      font-size: 0.9rem;
-      color: var(--text-muted);
-      font-family: 'Courier New', monospace;
-      margin-top: 5px;
-      line-height: 1.5;
-    }
-    .session-action-btn {
-      display: block;
-      width: 100%;
-      padding: 18px 20px;
+    /* ── Session edit button (per-card, bottom-right) ── */
+    .session-edit-btn {
+      position: absolute;
+      bottom: 8px;
+      right: 10px;
       background: none;
-      border: none;
-      border-bottom: 1px solid var(--border);
-      color: var(--text);
-      font-family: 'Georgia', serif;
-      font-size: 1rem;
-      text-align: left;
-      cursor: pointer;
-      transition: background 0.12s;
-      -webkit-tap-highlight-color: transparent;
-      box-sizing: border-box;
-    }
-    .session-action-btn:hover, .session-action-btn:active { background: var(--surface2); }
-    .session-action-cancel {
-      display: block;
-      width: 100%;
-      padding: 17px 20px;
-      background: none;
-      border: none;
-      border-top: 2px solid var(--border-hi);
+      border: 1px solid var(--border);
       color: var(--text-muted);
-      font-family: 'Courier New', monospace;
-      font-size: 0.9rem;
-      letter-spacing: 0.1em;
-      text-transform: uppercase;
+      border-radius: 2px;
+      padding: 3px 8px;
       cursor: pointer;
-      text-align: center;
+      font-size: 0.9rem;
+      line-height: 1.4;
+      font-family: 'Courier New', monospace;
+      letter-spacing: 0.06em;
+      transition: color 0.15s, border-color 0.15s, background 0.15s;
       -webkit-tap-highlight-color: transparent;
-      transition: color 0.12s, background 0.12s;
-      box-sizing: border-box;
     }
-    .session-action-cancel:hover, .session-action-cancel:active { color: var(--text); background: var(--surface2); }
+    .session-edit-btn:hover { color: var(--accent-bright); border-color: var(--accent); background: rgba(192,122,56,0.08); }
 
     /* ── Team sessions ── */
     .team-tag {
@@ -850,11 +804,12 @@
       font-family: 'Courier New', monospace;
       letter-spacing: 0.1em;
       text-transform: uppercase;
-      padding: 6px 14px;
+      padding: 6px 10px;
       border-radius: 2px;
       cursor: pointer;
       transition: background 0.15s, border-color 0.15s;
-      white-space: nowrap;
+      text-align: center;
+      line-height: 1.4;
     }
     .log-session-btn:hover { background: rgba(192,122,56,0.12); border-color: var(--accent); }
 
@@ -875,7 +830,7 @@
       border-radius: 2px;
       color: var(--text);
       font-family: 'Georgia', serif;
-      font-size: 0.95rem;
+      font-size: 1rem;
       padding: 10px 12px;
       width: 100%;
       outline: none;
@@ -999,7 +954,7 @@
 <header>
   <h1>Board Game Night</h1>
   <span id="data-status">loading...</span>
-  <button class="log-session-btn" onclick="openLogModal()">+ Log Session</button>
+  <button class="log-session-btn" onclick="openLogModal()">+ Log<br>Session</button>
 </header>
 
 <nav class="tab-bar">
@@ -1028,11 +983,8 @@
           <tbody id="leaderboard-body"></tbody>
         </table>
         <div class="pts-legend">
-          <span class="pts-legend-title">Points</span>
-          <span>played +1</span>
-          <span>· 🥇 +3</span>
-          <span>· 🥈 +2</span>
-          <span>· 🥉 +1</span>
+          <span>Participation = 1 pt</span>
+          <span>🥇 +3 · 🥈 +2 · 🥉 +1</span>
         </div>
       </div>
 
@@ -1054,21 +1006,11 @@
   <div class="tab-panel" id="tab-library">
 
     <div class="panel">
-      <div class="section-header">
-        <div class="section-title">Games Library</div>
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
+        <span class="filter-label" style="width:auto;margin:0">Players:</span>
         <button class="add-game-btn" onclick="openAddGameModal()">+ Add Game</button>
       </div>
-      <div class="filter-bar">
-        <span class="filter-label">Players:</span>
-        <button class="filter-btn active" data-count="all">All</button>
-        <button class="filter-btn" data-count="2">2</button>
-        <button class="filter-btn" data-count="3">3</button>
-        <button class="filter-btn" data-count="4">4</button>
-        <button class="filter-btn" data-count="5">5</button>
-        <button class="filter-btn" data-count="6">6</button>
-        <button class="filter-btn" data-count="7">7</button>
-        <button class="filter-btn" data-count="8">8</button>
-      </div>
+      <div class="filter-bar" id="filter-bar"></div>
       <div class="catalog-grid" id="catalog-grid"></div>
     </div>
 
@@ -1285,19 +1227,6 @@
   </div>
 </div>
 
-<!-- Session action sheet -->
-<div class="modal-backdrop" id="session-action-backdrop">
-  <div class="session-action-sheet">
-    <div class="session-action-info">
-      <div class="session-action-game" id="session-action-game"></div>
-      <div class="session-action-detail" id="session-action-detail"></div>
-    </div>
-    <button class="session-action-btn" id="session-action-view">View game details →</button>
-    <button class="session-action-btn" id="session-action-edit">Edit session</button>
-    <button class="session-action-cancel" id="session-action-cancel">Cancel</button>
-  </div>
-</div>
-
 <!-- Player profile modal -->
 <div class="modal-backdrop" id="player-modal-backdrop">
   <div class="modal">
@@ -1441,6 +1370,18 @@ function fmtDuration(mins) {
   const m = mins % 60;
   return m > 0 ? `${h}h ${m}m` : `${h}h`;
 }
+function fmtDateTwoLine(d) {
+  const [y, m, day] = d.split("-");
+  return `${m}-${day}-<br><span style="color:var(--text-muted)">${y}</span>`;
+}
+function fmtDurationTwoLine(mins) {
+  if (!mins) return `<div style="color:var(--text-muted)">—</div>`;
+  const h = Math.floor(mins / 60);
+  const m = mins % 60;
+  if (h === 0) return `<div>${m}m</div>`;
+  if (m === 0) return `<div>${h}h</div>`;
+  return `<div>${h}h</div><div>${m}m</div>`;
+}
 function formatOwners(owners) {
   const result = [];
   let remaining = [...owners];
@@ -1461,7 +1402,7 @@ function formatOwners(owners) {
 function buildPodiumHTML(s) {
   if (s.places[0] === COOP_WIN)  return `<span style="color:var(--accent-bright)">Co-op win 🎉</span>`;
   if (s.places[0] === COOP_LOSS) return `<span style="color:var(--red)">Co-op loss</span>`;
-  if (s.places[0] === DNF)       return `<span style="color:var(--text-muted)">Did not finish</span>`;
+  if (s.places[0] === DNF)       return `<span style="color:#8a9298">DNF</span>`;
   return s.places.slice(0, 3).map((name, i) => `<span>${MEDALS[i]} ${name}</span>`).join("");
 }
 
@@ -1520,6 +1461,16 @@ function combinedCounts(game) {
   const exp = expansionRange(game);
   if (!exp.length) return null;
   return [...new Set([...baseCounts(game), ...exp])].sort((a, b) => a - b);
+}
+
+// ── Filter button render (dynamic based on game library) ─────
+function renderFilterButtons() {
+  const counts = new Set();
+  _gamesLibrary.forEach(game => effectiveCounts(game).forEach(c => counts.add(c)));
+  const sorted = [...counts].sort((a, b) => a - b);
+  const bar = document.getElementById('filter-bar');
+  bar.innerHTML = `<button class="filter-btn active" data-count="all">All</button>
+    ${sorted.map(n => `<button class="filter-btn" data-count="${n}">${n}</button>`).join('')}`;
 }
 
 // ── Catalog render (uses module state) ────────────────────────
@@ -1611,10 +1562,10 @@ function renderDashboard(gamesLibrary, playLog, expansions, teamSessions) {
   const statGrid = document.getElementById("stat-grid");
   statGrid.innerHTML = "";
   [
-    { label: "Total Sessions",   value: totalSessions,         sub: "game nights" },
-    { label: "Games in Library", value: gamesLibrary.length,   sub: "titles" },
-    { label: "Most Played",      value: mostPlayed,            sub: sortedGames[0] ? `${sortedGames[0][1]}× played` : "" },
-    { label: "Current Champion", value: champion?.name ?? "—", sub: champion ? `${champion.pts} pts` : "" },
+    { label: "Total<br>Sessions",   value: totalSessions,         sub: "game nights" },
+    { label: "Games in<br>Library", value: gamesLibrary.length,   sub: "titles" },
+    { label: "Most<br>Played",      value: mostPlayed,            sub: sortedGames[0] ? `${sortedGames[0][1]}× played` : "" },
+    { label: "Current<br>Champion", value: champion?.name ?? "—", sub: champion ? `${champion.pts} pts` : "" },
   ].forEach(s => {
     statGrid.innerHTML += `
       <div class="stat-card">
@@ -1715,6 +1666,7 @@ function renderDashboard(gamesLibrary, playLog, expansions, teamSessions) {
           </div>
           ${hasScore ? `<div class="session-score">${s.team1score} – ${s.team2score}</div>` : ''}
           ${s.notes ? `<div class="session-notes">${s.notes}</div>` : ''}
+          <button class="session-edit-btn" data-session-id="${s.id}" data-session-type="teams">✏ edit</button>
         </div>`;
     } else {
       sessionList.innerHTML += `
@@ -1726,14 +1678,14 @@ function renderDashboard(gamesLibrary, playLog, expansions, teamSessions) {
           <div class="session-players">${s.players.join(", ")}</div>
           <div class="session-podium">${buildPodiumHTML(s)}</div>
           ${s.notes ? `<div class="session-notes">${s.notes}</div>` : ""}
+          <button class="session-edit-btn" data-session-id="${s.id}" data-session-type="regular">✏ edit</button>
         </div>`;
     }
   });
 
   // Catalog + reset filter
+  renderFilterButtons();
   renderCatalog("all");
-  document.querySelectorAll(".filter-btn").forEach(b => b.classList.remove("active"));
-  document.querySelector(".filter-btn[data-count='all']").classList.add("active");
 }
 
 // ── Game Modal ────────────────────────────────────────────────
@@ -1766,9 +1718,9 @@ function openGameModal(game) {
     .map(([n, d]) => ({ players: n, avg: Math.round(d.total / d.count) }));
 
   document.getElementById("modal-title").textContent = game.name;
-  const combined = combinedCounts(game);
-  const expStr = combined ? `  ·  ${formatCountsDisplay(combined)} w/ expansions` : "";
-  document.getElementById("modal-subtitle").textContent = `${game.min}–${game.max} players${expStr}`;
+  const expCounts = expansionRange(game);
+  const expLine = expCounts.length ? `<br>${formatCountsDisplay(expCounts)} w/ expansion` : "";
+  document.getElementById("modal-subtitle").innerHTML = `${game.min}–${game.max} players${expLine}`;
   const genreEl = document.getElementById("modal-genre");
   genreEl.textContent = game.genre ?? "";
   genreEl.style.display = game.genre ? "" : "none";
@@ -1804,7 +1756,6 @@ function openGameModal(game) {
   document.getElementById("modal-stats").innerHTML = `
     <div class="modal-stat"><div class="label">Times Played</div><div class="value">${totalPlays}</div></div>
     <div class="modal-stat"><div class="label">Avg Time</div><div class="value" style="font-size:1rem;padding-top:3px">${fmtDuration(avgTime)}</div></div>
-    <div class="modal-stat"><div class="label">Unique Winners</div><div class="value">${Object.keys(winCounts).length || "—"}</div></div>
     <div class="modal-stat"><div class="label">Top Winner</div><div class="value" style="font-size:1rem;padding-top:3px">${topWinner ? `${topWinner[0]} (${topWinner[1]}×)` : "—"}</div></div>`;
   const body = document.getElementById("modal-body");
   if (totalPlays === 0) {
@@ -1822,37 +1773,38 @@ function openGameModal(game) {
     body.innerHTML = groupAvgHTML + `
       <table><thead><tr>
         <th>Date</th><th>Players</th>
-        <th style="text-align:right">Time</th><th>Podium</th>
+        <th style="text-align:right;width:38px">Time</th><th>Result</th>
       </tr></thead><tbody>${allSessions.map(s => {
         if (s._type === 'team') {
           const t1win = s.winner === 'team1';
           const t2win = s.winner === 'team2';
           return `
           <tr>
-            <td style="font-family:'Courier New',monospace;font-size:0.9rem;color:var(--text-muted);white-space:nowrap">${fmtDate(s.date)}</td>
-            <td>
-              <span class="team-tag">Teams</span>
-              <div style="font-size:0.9rem;margin-top:3px;color:var(--text-muted)">${s.team1.join(', ')}</div>
-              <div style="font-size:0.9rem;color:var(--text-muted)">${s.team2.join(', ')}</div>
+            <td style="font-family:'Courier New',monospace;font-size:0.9rem;color:var(--text-muted);vertical-align:top;white-space:nowrap">${fmtDateTwoLine(s.date)}</td>
+            <td style="vertical-align:top">
+              <div style="font-size:0.9rem;color:var(--accent);font-family:'Courier New',monospace;letter-spacing:0.06em;text-transform:uppercase">Team 1</div>
+              <div style="color:var(--text-muted)">${s.team1.join(', ')}</div>
+              <div style="font-size:0.9rem;color:var(--accent);font-family:'Courier New',monospace;letter-spacing:0.06em;text-transform:uppercase;margin-top:6px">Team 2</div>
+              <div style="color:var(--text-muted)">${s.team2.join(', ')}</div>
             </td>
-            <td style="text-align:right;font-family:'Courier New',monospace;font-size:0.9rem;color:var(--text-muted);white-space:nowrap">${fmtDuration(s.duration)}</td>
-            <td style="font-size:0.9rem">${t1win ? `🥇 ${s.team1.join(', ')}` : t2win ? `🥇 ${s.team2.join(', ')}` : '—'}</td>
+            <td style="text-align:right;font-family:'Courier New',monospace;font-size:0.9rem;color:var(--text-muted);vertical-align:top">${fmtDurationTwoLine(s.duration)}</td>
+            <td style="font-size:0.9rem;vertical-align:top">${t1win ? `🥇 Team 1<div style="color:var(--text-muted);margin-top:2px">${s.team1.join(', ')}</div>` : t2win ? `🥇 Team 2<div style="color:var(--text-muted);margin-top:2px">${s.team2.join(', ')}</div>` : '—'}</td>
           </tr>
-          ${s.notes ? `<tr style="border-top:none"><td colspan="4" style="padding:0 8px 10px;font-size:0.9rem;color:var(--text-muted);font-style:italic">📝 ${s.notes}</td></tr>` : ""}`;
+          ${s.notes ? `<tr style="border-top:none"><td colspan="4" style="padding:0 8px 10px;font-size:0.9rem;color:var(--text-muted);font-style:italic">${s.notes}</td></tr>` : ""}`;
         }
         let podium;
         if (s.places[0] === COOP_WIN)      podium = `<span style="color:var(--accent-bright)">Co-op win</span>`;
         else if (s.places[0] === COOP_LOSS) podium = `<span style="color:var(--red)">Co-op loss</span>`;
-        else if (s.places[0] === DNF)       podium = `<span style="color:var(--text-muted)">Did not finish</span>`;
+        else if (s.places[0] === DNF)       podium = `<span style="color:var(--text-muted)">DNF</span>`;
         else podium = s.places.slice(0,3).map((name,i) => `<div style="white-space:nowrap">${MEDALS[i]} ${name}</div>`).join("");
         return `
         <tr>
-          <td style="font-family:'Courier New',monospace;font-size:0.9rem;color:var(--text-muted);white-space:nowrap">${fmtDate(s.date)}</td>
-          <td style="color:var(--text-muted)">${s.players.map(p => `<div>${p}</div>`).join("")}</td>
-          <td style="text-align:right;font-family:'Courier New',monospace;font-size:0.9rem;color:var(--text-muted);white-space:nowrap">${fmtDuration(s.duration)}</td>
-          <td style="font-size:0.9rem">${podium}</td>
+          <td style="font-family:'Courier New',monospace;font-size:0.9rem;color:var(--text-muted);vertical-align:top;white-space:nowrap">${fmtDateTwoLine(s.date)}</td>
+          <td style="color:var(--text-muted);vertical-align:top">${s.players.map(p => `<div>${p}</div>`).join("")}</td>
+          <td style="text-align:right;font-family:'Courier New',monospace;font-size:0.9rem;color:var(--text-muted);vertical-align:top">${fmtDurationTwoLine(s.duration)}</td>
+          <td style="font-size:0.9rem;vertical-align:top">${podium}</td>
         </tr>
-        ${s.notes ? `<tr style="border-top:none"><td colspan="4" style="padding:0 8px 10px;font-size:0.9rem;color:var(--text-muted);font-style:italic">📝 ${s.notes}</td></tr>` : ""}`;
+        ${s.notes ? `<tr style="border-top:none"><td colspan="4" style="padding:0 8px 10px;font-size:0.9rem;color:var(--text-muted);font-style:italic">${s.notes}</td></tr>` : ""}`;
       }).join("")}</tbody></table>`;
   }
   // ── Action row: Edit + Delete ──
@@ -1935,16 +1887,16 @@ function openPlayerModal(name) {
         <tr>
           <td style="font-family:'Courier New',monospace;font-size:0.9rem;color:var(--text-muted)">${fmtDate(s.date)}</td>
           <td>
-            <div><span class="team-tag">Teams</span>${s.game}</div>
+            <div>${s.game}</div>
             <div style="font-size:0.9rem;color:var(--text-muted);margin-top:2px">${[...s.team1, ...s.team2].filter(p => p !== name).join(', ')}</div>
           </td>
-          <td style="text-align:right;font-size:0.9rem;white-space:nowrap">${won ? '🥇 Win' : '<span style="color:var(--text-muted)">Loss</span>'}</td>
+          <td style="text-align:right;font-size:0.9rem;white-space:nowrap">${won ? '🥇 Team win' : '<span style="color:var(--text-muted)">Team loss</span>'}</td>
         </tr>`;
       }
       let finish;
       if (s.places[0] === COOP_WIN)      finish = `<span style="color:var(--accent-bright)">Co-op win</span>`;
       else if (s.places[0] === COOP_LOSS) finish = `<span style="color:var(--red)">Co-op loss</span>`;
-      else if (s.places[0] === DNF)       finish = `<span style="color:var(--text-muted)">Did not finish</span>`;
+      else if (s.places[0] === DNF)       finish = `<span style="color:var(--text-muted)">DNF</span>`;
       else {
         const idx = s.places.indexOf(name);
         finish = idx >= 0
@@ -1960,7 +1912,7 @@ function openPlayerModal(name) {
         </td>
         <td style="text-align:right;font-size:0.9rem;white-space:nowrap">${finish}</td>
       </tr>
-      ${s.notes ? `<tr style="border-top:none"><td colspan="3" style="padding:0 8px 10px;font-size:0.9rem;color:var(--text-muted);font-style:italic">📝 ${s.notes}</td></tr>` : ""}`;
+      ${s.notes ? `<tr style="border-top:none"><td colspan="3" style="padding:0 8px 10px;font-size:0.9rem;color:var(--text-muted);font-style:italic">${s.notes}</td></tr>` : ""}`;
     }).join("")}</tbody></table>`;
   document.getElementById("player-modal-backdrop").classList.add("open");
 }
@@ -2163,7 +2115,7 @@ async function submitSession() {
         Winner: winner === 'team1' ? 'Team 1' : 'Team 2'
       };
       if (duration > 0) fields['Duration'] = duration;
-      if (notes)        fields['Notes']    = notes;
+      fields['Notes'] = notes || null;
       if (isEdit) { await atUpdate('Team Log', _logEditId, fields); _logEditId = null; _logEditType = null; }
       else          await atCreate('Team Log', fields);
 
@@ -2187,7 +2139,7 @@ async function submitSession() {
         else if (result === 'coop_win')  { fields['1st Place'] = 'Everyone!'; }
         else if (result === 'coop_loss') { fields['1st Place'] = 'Loss'; }
       if (duration > 0) fields['Duration'] = duration;
-      if (notes)        fields['Notes']    = notes;
+      fields['Notes'] = notes || null;
       if (isEdit) { await atUpdate('Play Log', _logEditId, fields); _logEditId = null; _logEditType = null; }
       else          await atCreate('Play Log', fields);
     }
@@ -2265,7 +2217,15 @@ document.getElementById('log-type-chips').addEventListener('click', e => {
   if (!chip) return;
   document.querySelectorAll('#log-type-chips .chip').forEach(c => c.classList.remove('active'));
   chip.classList.add('active');
-  toggleSessionType(chip.dataset.type);
+  const newType = chip.dataset.type;
+  toggleSessionType(newType);
+  // Populate team chips if switching to teams and they haven't been filled yet
+  if (newType === 'teams' && !document.querySelector('#log-team1 .chip')) {
+    document.getElementById('log-team1').innerHTML = PLAYERS.map(p =>
+      `<button class="chip" data-player="${p}">${p}</button>`).join('');
+    document.getElementById('log-team2').innerHTML = PLAYERS.map(p =>
+      `<button class="chip" data-player="${p}">${p}</button>`).join('');
+  }
 });
 
 // Winner chips (single select)
@@ -2329,56 +2289,22 @@ document.addEventListener("keydown", e => {
     backdrop.classList.remove("open");
     playerBackdrop.classList.remove("open");
     closeLogModal();
-    closeSessionActionSheet();
     agBackdrop.classList.remove("open"); _agEditId = null;
   }
 });
 
-// ── Session list → action sheet ──────────────────────────────
+// ── Session list: tap card → game detail, tap edit btn → edit ──
 document.getElementById("session-list").addEventListener("click", e => {
+  const editBtn = e.target.closest(".session-edit-btn");
+  if (editBtn) {
+    e.stopPropagation();
+    openEditSessionModal(editBtn.dataset.sessionId, editBtn.dataset.sessionType);
+    return;
+  }
   const card = e.target.closest(".session");
   if (!card) return;
-  openSessionActionSheet(card.dataset.sessionId, card.dataset.sessionType, card.dataset.game);
-});
-
-function openSessionActionSheet(sessionId, sessionType, gameName) {
-  const session = sessionType === 'teams'
-    ? _teamSessions.find(ts => ts.id === sessionId)
-    : _playLog.find(s => s.id === sessionId);
-  if (!session) return;
-
-  // Header info
-  document.getElementById('session-action-game').textContent = gameName;
-  let detail = fmtDate(session.date);
-  if (sessionType === 'teams') {
-    detail += '\n' + session.team1.join(', ') + ' vs ' + session.team2.join(', ');
-  } else {
-    detail += '\n' + session.players.join(', ');
-    const result = buildPodiumHTML(session).replace(/<[^>]+>/g, '').trim();
-    if (result) detail += '\n' + result;
-  }
-  document.getElementById('session-action-detail').textContent = detail;
-
-  // Wire buttons
-  document.getElementById('session-action-view').onclick = () => {
-    closeSessionActionSheet();
-    const game = _gamesLibrary.find(g => g.name === gameName);
-    if (game) openGameModal(game);
-  };
-  document.getElementById('session-action-edit').onclick = () => {
-    closeSessionActionSheet();
-    openEditSessionModal(sessionId, sessionType);
-  };
-
-  document.getElementById('session-action-backdrop').classList.add('open');
-}
-
-function closeSessionActionSheet() {
-  document.getElementById('session-action-backdrop').classList.remove('open');
-}
-document.getElementById('session-action-cancel').addEventListener('click', closeSessionActionSheet);
-document.getElementById('session-action-backdrop').addEventListener('click', e => {
-  if (e.target === document.getElementById('session-action-backdrop')) closeSessionActionSheet();
+  const game = _gamesLibrary.find(g => g.name === card.dataset.game);
+  if (game) openGameModal(game);
 });
 
 // ── Tab switching ─────────────────────────────────────────────
@@ -2391,14 +2317,14 @@ document.querySelectorAll(".tab").forEach(tab => {
   });
 });
 
-// ── Filter buttons ────────────────────────────────────────────
-document.querySelectorAll(".filter-btn").forEach(btn => {
-  btn.addEventListener("click", () => {
-    document.querySelectorAll(".filter-btn").forEach(b => b.classList.remove("active"));
-    btn.classList.add("active");
-    const count = btn.dataset.count === "all" ? "all" : parseInt(btn.dataset.count);
-    renderCatalog(count);
-  });
+// ── Filter buttons (event delegation — buttons are dynamic) ──
+document.getElementById('filter-bar').addEventListener('click', e => {
+  const btn = e.target.closest('.filter-btn');
+  if (!btn) return;
+  document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  const count = btn.dataset.count === 'all' ? 'all' : parseInt(btn.dataset.count);
+  renderCatalog(count);
 });
 
 // ── Add Game Modal ────────────────────────────────────────────
