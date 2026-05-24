@@ -24,11 +24,10 @@ A board game group tracker. The user tells Claude about each game night in plain
 ### Games Library fields
 Game Name | Min Players | Max Players | Expansion Counts | Owners | Genre | Rules URL
 
-Expansion Counts: text field, e.g. "2-6" or "1-4, 6" — parsed by dashboard to handle all 4 cases:
-1. Only max extends: "2-6" (base 2-4)
-2. Only min changes: "1-5" (base 2-5)
-3. Both change: "1-6" (base 2-4)
-4. Non-contiguous: "1-4, 6" (base 1-4, expansion adds exactly 6)
+Expansion Min / Expansion Max: the player count range the expansion adds (additive with base range).
+Dashboard unions expansion range with base range for filtering and display.
+- Dune: Imperium base 1-4, Uprising adds 6-player mode → Expansion Min=6, Expansion Max=6 → displays "1–4, 6"
+- A game base 2-4, expansion extends to 6 → Expansion Min=5, Expansion Max=6 → displays "2–6"
 
 ### Play Log fields
 Date | Game | Players (comma-separated) | 1st Place | 2nd Place | 3rd Place | Duration (mins) | Notes
