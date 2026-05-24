@@ -1094,8 +1094,78 @@
 </div>
 
 <script>
-// ── Config ────────────────────────────────────────────────────
-const API_URL = "https://script.google.com/macros/s/AKfycbym5BgxGLIqHwdOCT59LX-wZv63_FFPiEFk7GeYLu0nHtzm2huSmEtmm2MJsu-7WXV3DQ/exec";
+// ── Airtable config ───────────────────────────────────────────
+const AT_BASE  = "appMG6K6WduzpxNM4";
+const AT_TOKEN = "patHNaPELhhWYyFCk.303ed772bef21348f1daca49c8caa024df09dca0a3f0a9f1ddd5b85b71db272b";
+const AT_URL   = `https://api.airtable.com/v0/${AT_BASE}`;
+const AT_HDR   = { "Authorization": `Bearer ${AT_TOKEN}`, "Content-Type": "application/json" };
+
+// ── Airtable helpers ──────────────────────────────────────────
+async function atFetch(table, qs = "") {
+  let records = [], offset = null;
+  do {
+    let url = `${AT_URL}/${encodeURIComponent(table)}?pageSize=100${qs ? "&" + qs : ""}`;
+    if (offset) url += `&offset=${encodeURIComponent(offset)}`;
+    const res  = await fetch(url, { headers: { "Authorization": `Bearer ${AT_TOKEN}` } });
+    const data = await res.json();
+    records = records.concat(data.records || []);
+    offset  = data.offset || null;
+  } while (offset);
+  return records;
+}
+async function atCreate(table, fields) {
+  const res  = await fetch(`${AT_URL}/${encodeURIComponent(table)}`, {
+    method: "POST", headers: AT_HDR,
+    body: JSON.stringify({ records: [{ fields }] })
+  });
+  const data = await res.json();
+  if (data.error) throw new Error(data.error.message);
+  return data.records[0];
+}
+
+// ── Data parsers ──────────────────────────────────────────────
+function parseGame(r) {
+  const f = r.fields;
+  return {
+    name:         f["Game Name"]     || "",
+    min:          f["Min Players"]   ?? null,
+    max:          f["Max Players"]   ?? null,
+    expansionMin: f["Expansion Min"] ?? null,
+    expansionMax: f["Expansion Max"] ?? null,
+    owners:       f["Owners"] ? f["Owners"].split(",").map(s => s.trim()) : [],
+    genre:        f["Genre"]    || null,
+    rulesUrl:     f["Rules URL"] || null
+  };
+}
+function parseSession(r) {
+  const f = r.fields;
+  return {
+    date:     f["Date"]    || "",
+    game:     f["Game"]    || "",
+    players:  f["Players"] ? f["Players"].split(",").map(s => s.trim()).filter(Boolean) : [],
+    places:   [f["1st Place"], f["2nd Place"], f["3rd Place"]].filter(Boolean),
+    duration: f["Duration"] || null,
+    notes:    f["Notes"]   || null
+  };
+}
+function parseExpansion(r) {
+  const f = r.fields;
+  return { game: f["Game"] || "", name: f["Expansion Name"] || "", owned: f["Owned"] === true, owner: f["Owner"] || "" };
+}
+function parseTeamSession(r) {
+  const f = r.fields;
+  return {
+    date:       f["Date"] || "",
+    game:       f["Game"] || "",
+    team1:      f["Team 1"] ? f["Team 1"].split(",").map(s => s.trim()).filter(Boolean) : [],
+    team2:      f["Team 2"] ? f["Team 2"].split(",").map(s => s.trim()).filter(Boolean) : [],
+    team1score: f["T1 Score"] ?? null,
+    team2score: f["T2 Score"] ?? null,
+    winner:     f["Winner"] ? f["Winner"].toLowerCase().replace(/\s/g, "") : "",
+    duration:   f["Duration"] || null,
+    notes:      f["Notes"]   || null
+  };
+}
 
 // ── Constants ─────────────────────────────────────────────────
 const PLACE_PTS = [3, 2, 1];
@@ -1590,29 +1660,27 @@ async function submitSession() {
   if (!game)           { logFeedback('Please select a game.', 'err'); return; }
   if (!players.length) { logFeedback('Please select at least one player.', 'err'); return; }
 
-  const params = new URLSearchParams({ action: 'log', date, game });
-  players.forEach((p, i) => params.set(`p${i+1}`, p));
-
+  const fields = { Date: date, Game: game, Players: players.join(', ') };
   if (result === 'competitive') {
     const first  = document.getElementById('log-first').value;
     const second = document.getElementById('log-second').value;
     const third  = document.getElementById('log-third').value;
     if (!first) { logFeedback('Please select a 1st place winner.', 'err'); return; }
-    params.set('first', first);
-    if (second) params.set('second', second);
-    if (third)  params.set('third', third);
-  } else {
-    params.set('result', result);
-  }
-  if (duration > 0) params.set('duration', String(duration));
-  if (notes)        params.set('notes', notes);
+    fields['1st Place'] = first;
+    if (second) fields['2nd Place'] = second;
+    if (third)  fields['3rd Place'] = third;
+  } else if (result === 'DNF')       { fields['1st Place'] = 'DNF'; }
+    else if (result === 'coop_win')  { fields['1st Place'] = 'Everyone!'; }
+    else if (result === 'coop_loss') { fields['1st Place'] = 'Loss'; }
+  if (duration > 0) fields['Duration'] = duration;
+  if (notes)        fields['Notes']    = notes;
 
   const btn = document.getElementById('log-submit');
   btn.disabled = true;
   btn.textContent = 'Submitting…';
 
   try {
-    await fetch(`${API_URL}?${params.toString()}`);
+    await atCreate('Play Log', fields);
     logFeedback('✅ Session logged!', 'ok');
     btn.textContent = 'Logged!';
     setTimeout(init, 1200);
@@ -1752,17 +1820,17 @@ async function submitNewGame() {
   if (!name)        { agFeedback('Please enter a game name.', 'err'); return; }
   if (!min || !max) { agFeedback('Please enter min and max players.', 'err'); return; }
 
-  const params = new URLSearchParams({ action: 'addGame', name, min, max });
-  if (expMin) params.set('expMin', expMin);
-  if (expMax) params.set('expMax', expMax);
-  if (owners) params.set('owners', owners);
+  const fields = { 'Game Name': name, 'Min Players': Number(min), 'Max Players': Number(max) };
+  if (expMin) fields['Expansion Min'] = Number(expMin);
+  if (expMax) fields['Expansion Max'] = Number(expMax);
+  if (owners) fields['Owners'] = owners;
 
   const btn = document.getElementById('ag-submit');
   btn.disabled = true;
   btn.textContent = 'Adding…';
 
   try {
-    await fetch(`${API_URL}?${params.toString()}`);
+    await atCreate('Games Library', fields);
     agFeedback('✅ Game added!', 'ok');
     btn.textContent = 'Added!';
     setTimeout(init, 1200);
@@ -1789,8 +1857,8 @@ const agBackdrop = document.getElementById('add-game-modal-backdrop');
 document.getElementById('add-game-modal-close').addEventListener('click', () => agBackdrop.classList.remove('open'));
 agBackdrop.addEventListener('click', e => { if (e.target === agBackdrop) agBackdrop.classList.remove('open'); });
 
-// ── Init: cache-first, then refresh from API ──────────────────
-const CACHE_KEY = "bgn_cache";
+// ── Init: cache-first, then refresh from Airtable ────────────
+const CACHE_KEY = "bgn_cache_v2";
 
 async function init() {
   const statusEl = document.getElementById("data-status");
@@ -1799,21 +1867,30 @@ async function init() {
   const cached = localStorage.getItem(CACHE_KEY);
   if (cached) {
     try {
-      const data = JSON.parse(cached);
+      const data    = JSON.parse(cached);
       const playLog = [...data.sessions].sort((a, b) => b.date.localeCompare(a.date));
       statusEl.textContent = "updating…";
       renderDashboard(data.games, playLog, data.expansions || [], data.teamSessions || []);
     } catch (_) { /* ignore corrupt cache */ }
   }
 
-  // 2. Fetch fresh data in the background
+  // 2. Fetch fresh from Airtable in parallel
   try {
-    const res  = await fetch(API_URL);
-    const data = await res.json();
-    const playLog = [...data.sessions].sort((a, b) => b.date.localeCompare(a.date));
+    const [gameRecs, sessionRecs, expRecs, teamRecs] = await Promise.all([
+      atFetch("Games Library", "sort[0][field]=Game%20Name&sort[0][direction]=asc"),
+      atFetch("Play Log",      "sort[0][field]=Date&sort[0][direction]=desc"),
+      atFetch("Expansions"),
+      atFetch("Team Log",      "sort[0][field]=Date&sort[0][direction]=desc")
+    ]);
+    const data = {
+      games:        gameRecs.map(parseGame),
+      sessions:     sessionRecs.map(parseSession),
+      expansions:   expRecs.map(parseExpansion),
+      teamSessions: teamRecs.map(parseTeamSession)
+    };
     localStorage.setItem(CACHE_KEY, JSON.stringify(data));
     statusEl.textContent = "live data";
-    renderDashboard(data.games, playLog, data.expansions || [], data.teamSessions || []);
+    renderDashboard(data.games, data.sessions, data.expansions, data.teamSessions);
   } catch (err) {
     console.error("Failed to load data:", err);
     if (cached) {
@@ -1821,7 +1898,7 @@ async function init() {
     } else {
       statusEl.textContent = "⚠ connection error";
       document.getElementById("session-list").innerHTML =
-        `<div style="color:var(--text-muted);font-size:0.85rem;text-align:center;padding:32px 0;font-family:'Courier New',monospace;letter-spacing:0.08em">Could not connect to Google Sheets. Please refresh.</div>`;
+        `<div style="color:var(--text-muted);font-size:0.85rem;text-align:center;padding:32px 0;font-family:'Courier New',monospace;letter-spacing:0.08em">Could not connect. Please refresh.</div>`;
     }
   }
 }
