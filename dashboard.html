@@ -2588,11 +2588,24 @@ async function submitNewGame() {
   btn.textContent = isEdit ? 'Saving…' : 'Adding…';
 
   try {
-    if (isEdit) { await atUpdate('Games Library', _agEditId, fields); _agEditId = null; }
-    else          await atCreate('Games Library', fields);
-    agFeedback(isEdit ? '✅ Game updated!' : '✅ Game added!', 'ok');
-    btn.textContent = isEdit ? 'Saved!' : 'Added!';
-    setTimeout(init, 1200);
+    if (isEdit) {
+      const editId = _agEditId;
+      await atUpdate('Games Library', editId, fields);
+      _agEditId = null;
+      agFeedback('✅ Game updated!', 'ok');
+      btn.textContent = 'Saved!';
+      setTimeout(async () => {
+        agBackdrop.classList.remove('open');
+        await init();
+        const updated = _gamesLibrary.find(g => g.id === editId);
+        if (updated) openGameModal(updated);
+      }, 800);
+    } else {
+      await atCreate('Games Library', fields);
+      agFeedback('✅ Game added!', 'ok');
+      btn.textContent = 'Added!';
+      setTimeout(init, 1200);
+    }
   } catch (err) {
     agFeedback('⚠ Could not submit — check your connection.', 'err');
     btn.disabled = false;
