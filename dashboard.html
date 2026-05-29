@@ -1780,8 +1780,8 @@ function renderDashboard(gamesLibrary, playLog, expansions, teamSessions) {
   _leaderboard.forEach((p, i) => {
     const rankDisplay = MEDALS[i] ?? `${i + 1}.`;
     tbody.innerHTML += `
-      <tr>
-        <td><span class="rank">${rankDisplay}</span> <span class="player-link" onclick="openPlayerModal('${p.name}')">${p.name}</span></td>
+      <tr style="cursor:pointer" onclick="openPlayerModal('${p.name}')">
+        <td><span class="rank">${rankDisplay}</span> <span class="player-link">${p.name}</span></td>
         <td style="text-align:right">${p.sessions}</td>
         <td class="pts-col">${p.pts}</td>
         <td class="firsts-col">${p.firsts}</td>
