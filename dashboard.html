@@ -499,8 +499,8 @@
       margin-bottom: 4px;
     }
     .modal-stat .value { font-size: 1.2rem; color: var(--accent-bright); margin-top: auto; }
-    .modal-scroll { flex: 1; overflow-y: auto; }
-    .modal-body { padding: 16px 24px 20px; }
+    .modal-scroll { flex: 1; overflow-y: auto; -webkit-overflow-scrolling: touch; }
+    .modal-body { overflow-y: auto; -webkit-overflow-scrolling: touch; padding: 16px 24px 20px; }
     .modal-body table { font-size: 0.92rem; }
     .modal-body thead th { padding: 0 8px 8px; }
     .modal-body tbody td { padding: 9px 8px; }
@@ -1347,6 +1347,23 @@
 </div>
 
 <script>
+// ── Body scroll lock (prevents background scroll on iOS when modal is open) ──
+let _scrollLockY = 0;
+function lockScroll() {
+  _scrollLockY = window.scrollY;
+  document.body.style.overflow = 'hidden';
+  document.body.style.position = 'fixed';
+  document.body.style.top = `-${_scrollLockY}px`;
+  document.body.style.width = '100%';
+}
+function unlockScroll() {
+  document.body.style.overflow = '';
+  document.body.style.position = '';
+  document.body.style.top = '';
+  document.body.style.width = '';
+  window.scrollTo(0, _scrollLockY);
+}
+
 // ── Airtable config ───────────────────────────────────────────
 const AT_BASE  = "appMG6K6WduzpxNM4";
 const AT_TOKEN = "patCY48blO7Sv1Z5m.491a90d11651fc731c5cfe573bddc4a1ca6ba0a92f942934ed4a4a0902b328de";
@@ -2652,6 +2669,13 @@ async function init() {
     }
   }
 }
+
+// ── Auto-lock body scroll whenever any modal is open ─────────
+new MutationObserver(() => {
+  const anyOpen = !!document.querySelector('.modal-backdrop.open');
+  if (anyOpen && document.body.style.position !== 'fixed') lockScroll();
+  else if (!anyOpen && document.body.style.position === 'fixed') unlockScroll();
+}).observe(document.body, { subtree: true, attributeFilter: ['class'], attributes: true });
 
 // ── Pull-to-refresh ───────────────────────────────────────────
 (function() {
