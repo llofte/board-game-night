@@ -1088,8 +1088,7 @@
           <tbody id="leaderboard-body"></tbody>
         </table>
         <div class="pts-legend">
-          <span>Participation = 1 pt</span>
-          <span>🥇 +3 · 🥈 +2 · 🥉 +1</span>
+          <span>🥇 +3 · 🥈 +2 · 🥉 +1 · 👤 +1</span>
         </div>
       </div>
 
@@ -2092,10 +2091,10 @@ function openPlayerModal(name) {
   document.getElementById("player-modal-medals").innerHTML = `
     <div class="player-medal-item"><span>🥇</span><span class="medal-count">${ps.firsts}</span></div>
     <div class="player-medal-item"><span>🥈</span><span class="medal-count">${ps.seconds}</span></div>
-    <div class="player-medal-item"><span>🥉</span><span class="medal-count">${ps.thirds}</span></div>`;
+    <div class="player-medal-item"><span>🥉</span><span class="medal-count">${ps.thirds}</span></div>
+    <div class="player-medal-item"><span>👤</span><span class="medal-count">${ps.sessions}</span></div>`;
   document.getElementById("player-modal-stats").innerHTML = `
     <div class="modal-stat"><div class="label">Rank</div><div class="value">${rankLabel}</div></div>
-    <div class="modal-stat"><div class="label">Sessions</div><div class="value">${ps.sessions}</div></div>
     <div class="modal-stat"><div class="label">Points</div><div class="value">${ps.pts}</div></div>
     <div class="modal-stat"><div class="label">Most Played</div><div class="value" style="font-size:0.9rem;padding-top:4px;line-height:1.3">${favGameLabel}</div></div>`;
   const body = document.getElementById("player-modal-body");
