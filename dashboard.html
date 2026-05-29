@@ -2580,7 +2580,7 @@ async function submitNewGame() {
   if (bggUrl)       fields['BGG URL']       = bggUrl;
   if (rulesUrl)     fields['Rules URL']     = rulesUrl;
   if (tutorialUrl)  fields['Tutorial URL']  = tutorialUrl;
-  if (notes)        fields['Notes']         = notes;
+  fields['Notes'] = notes || null;
 
   const isEdit = !!_agEditId;
   const btn = document.getElementById('ag-submit');
