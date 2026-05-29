@@ -1480,7 +1480,8 @@ let _chart        = null;
 let _teamSessions = [];
 let _logEditId    = null;   // record ID when editing a session (null = new)
 let _logEditType  = null;   // 'regular' | 'team'
-let _agEditId     = null;   // record ID when editing a game (null = new)
+let _agEditId       = null;   // record ID when editing a game (null = new)
+let _agLastSavedId  = null;   // record ID of last successfully saved edit — used to return to game detail on close
 let _filterCount = 'all';  // player count filter: 'all' | number
 let _pendingFavorites = {};  // { gameId: bool } — survives re-renders until saved
 
@@ -2497,7 +2498,7 @@ document.addEventListener("keydown", e => {
     backdrop.classList.remove("open");
     playerBackdrop.classList.remove("open");
     closeLogModal();
-    agBackdrop.classList.remove("open"); _agEditId = null;
+    closeAddGameModal();
   }
 });
 
@@ -2591,15 +2592,12 @@ async function submitNewGame() {
     if (isEdit) {
       const editId = _agEditId;
       await atUpdate('Games Library', editId, fields);
+      _agLastSavedId = editId;
       _agEditId = null;
-      agFeedback('✅ Game updated!', 'ok');
-      btn.textContent = 'Saved!';
-      setTimeout(async () => {
-        agBackdrop.classList.remove('open');
-        await init();
-        const updated = _gamesLibrary.find(g => g.id === editId);
-        if (updated) openGameModal(updated);
-      }, 800);
+      agFeedback('✅ Saved! Close to return to game.', 'ok');
+      btn.textContent = 'Save Changes';
+      btn.disabled = false;
+      init(); // refresh in background
     } else {
       await atCreate('Games Library', fields);
       agFeedback('✅ Game added!', 'ok');
@@ -2626,16 +2624,18 @@ document.getElementById('ag-owners').addEventListener('click', e => {
 });
 document.getElementById('ag-submit').addEventListener('click', submitNewGame);
 const agBackdrop = document.getElementById('add-game-modal-backdrop');
-document.getElementById('add-game-modal-close').addEventListener('click', () => {
+function closeAddGameModal() {
   agBackdrop.classList.remove('open');
+  const savedId = _agLastSavedId;
   _agEditId = null;
-});
-agBackdrop.addEventListener('click', e => {
-  if (e.target === agBackdrop) {
-    agBackdrop.classList.remove('open');
-    _agEditId = null;
+  _agLastSavedId = null;
+  if (savedId) {
+    const game = _gamesLibrary.find(g => g.id === savedId);
+    if (game) openGameModal(game);
   }
-});
+}
+document.getElementById('add-game-modal-close').addEventListener('click', closeAddGameModal);
+agBackdrop.addEventListener('click', e => { if (e.target === agBackdrop) closeAddGameModal(); });
 
 // ── Init: cache-first, then refresh from Airtable ────────────
 const CACHE_KEY = "bgn_cache_v4";
