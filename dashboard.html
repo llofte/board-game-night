@@ -733,6 +733,32 @@
     .player-medal-item { display: flex; align-items: center; gap: 5px; font-size: 0.9rem; font-family: 'Courier New', monospace; }
     .player-medal-item .medal-count { color: var(--text); font-size: 1rem; }
 
+    /* ── Pull-to-refresh indicator ── */
+    #ptr-indicator {
+      position: fixed;
+      top: 0; left: 0; right: 0;
+      z-index: 300;
+      height: 48px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: var(--surface);
+      border-bottom: 1px solid var(--border);
+      pointer-events: none;
+      transform: translateY(-48px);
+    }
+    #ptr-spinner {
+      width: 22px;
+      height: 22px;
+      border: 2px solid var(--border-hi);
+      border-top-color: var(--accent-bright);
+      border-radius: 50%;
+    }
+    .ptr-spin #ptr-spinner {
+      animation: ptr-rotate 0.7s linear infinite;
+    }
+    @keyframes ptr-rotate { to { transform: rotate(360deg); } }
+
     /* ── Responsive ── */
     @media (max-width: 640px) {
       /* Header */
@@ -980,6 +1006,8 @@
   </style>
 </head>
 <body>
+
+<div id="ptr-indicator"><div id="ptr-spinner"></div></div>
 
 <header>
   <h1>Board Game Night</h1>
@@ -2553,6 +2581,51 @@ async function init() {
     }
   }
 }
+
+// ── Pull-to-refresh ───────────────────────────────────────────
+(function() {
+  const THRESHOLD = 70;
+  const ind = document.getElementById('ptr-indicator');
+  let startY = 0, pulling = false, triggered = false;
+
+  function modalsOpen() { return !!document.querySelector('.modal-backdrop.open'); }
+
+  document.addEventListener('touchstart', e => {
+    if (window.scrollY !== 0 || modalsOpen()) return;
+    startY = e.touches[0].clientY;
+    pulling = true; triggered = false;
+    ind.style.transition = 'none';
+  }, { passive: true });
+
+  document.addEventListener('touchmove', e => {
+    if (!pulling) return;
+    const pull = Math.min(Math.max(0, e.touches[0].clientY - startY) * 0.45, THRESHOLD + 16);
+    ind.style.transform = `translateY(${pull - 48}px)`;
+    if (!ind.classList.contains('ptr-spin')) {
+      ind.querySelector('#ptr-spinner').style.transform = `rotate(${Math.min(pull / THRESHOLD, 1) * 300}deg)`;
+    }
+    triggered = pull >= THRESHOLD;
+  }, { passive: true });
+
+  document.addEventListener('touchend', () => {
+    if (!pulling) return;
+    pulling = false;
+    ind.style.transition = 'transform 0.25s ease';
+    if (triggered) {
+      ind.style.transform = 'translateY(0)';
+      ind.classList.add('ptr-spin');
+      ind.querySelector('#ptr-spinner').style.transform = '';
+      localStorage.removeItem(CACHE_KEY);
+      init().finally(() => {
+        ind.style.transition = 'transform 0.3s ease';
+        ind.style.transform = 'translateY(-48px)';
+        setTimeout(() => ind.classList.remove('ptr-spin'), 350);
+      });
+    } else {
+      ind.style.transform = 'translateY(-48px)';
+    }
+  }, { passive: true });
+})();
 
 init();
 </script>
