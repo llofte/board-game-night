@@ -1653,8 +1653,7 @@ function renderCatalog() {
 
     const meta = document.createElement("div");
     meta.className = "game-card-meta";
-    const expBadge = hasOwnedExpansion(game.name) ? `<span class="exp-badge">+exp</span>` : "";
-    meta.innerHTML = `<span class="game-card-players">${playerStr} ${expBadge}</span><span class="game-card-plays">${plays > 0 ? `${plays}×` : "—"}</span>`;
+    meta.innerHTML = `<span class="game-card-players">${playerStr}</span><span class="game-card-plays">${plays > 0 ? `${plays}×` : "—"}</span>`;
 
     card.appendChild(header);
     card.appendChild(meta);
