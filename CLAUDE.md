@@ -22,7 +22,7 @@ A board game group tracker. The user tells Claude about each game night in plain
 | Team Log | tbl5Yi01dkX7DdiX8 | Date |
 
 ### Games Library fields
-Game Name | Min Players | Max Players | Expansion Counts | Owners | Genre | Rules URL
+Game Name | Min Players | Max Players | Expansion Min | Expansion Max | Owners | Genre | BGG URL | Rules URL | Tutorial URL | Notes | Favorite
 
 Expansion Min / Expansion Max: the player count range the expansion adds (additive with base range).
 Dashboard unions expansion range with base range for filtering and display.
@@ -39,11 +39,19 @@ Expansion Name | Game | Owned (checkbox) | Owner
 Date | Game | Team 1 (comma-separated) | Team 2 (comma-separated) | T1 Score | T2 Score | Winner ("Team 1" or "Team 2") | Duration (mins) | Notes
 
 ## How Claude makes changes
-Claude uses WebFetch or the browser javascript_tool to call the Airtable REST API directly:
+Claude owns ALL Airtable changes — records AND schema. The user never touches Airtable.
+
+### Record operations (via Python scripts or at.py)
 - **Read**: GET `{base_url}/{table}?pageSize=100&...`
 - **Write**: POST `{base_url}/{table}` with `{ records: [{ fields: {...} }] }`
 - **Update**: PATCH `{base_url}/{table}/{recordId}` with `{ fields: {...} }`
 - **Delete**: DELETE `{base_url}/{table}/{recordId}`
+
+### Schema operations (adding/modifying fields)
+- **Add field**: POST `https://api.airtable.com/v0/meta/bases/{baseId}/tables/{tableId}/fields`
+  Body: `{ "name": "Field Name", "type": "multilineText" | "singleLineText" | "number" | "checkbox" | "url" | ... }`
+- Token has `schema.bases:write` permission — use it whenever a new field is needed.
+- Always update CLAUDE.md field lists after adding a field.
 
 No Apps Script. No paste-and-deploy. Claude just does it.
 
@@ -75,7 +83,7 @@ When asked, Claude:
 - Step 3: Airtable as live database ✅ (current)
 
 ## Notes
-- User never touches Airtable directly — Claude handles all data changes
+- User never touches Airtable directly — Claude handles ALL data changes AND schema changes (adding fields, etc.)
 - User never edits code — Claude handles all code changes
 - User only runs: `git push` commands when Claude provides the full terminal command
 - Dashboard auto-sorts games alphabetically on load (Airtable query sorts by Game Name)
