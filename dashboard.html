@@ -1836,11 +1836,14 @@ function openGameModal(game) {
   const knownExps = _expansions[game.name];
   if (knownExps && knownExps.length > 0) {
     expListEl.style.display = "";
+    // If the game has exactly one owner, suppress that owner tag on expansions they own
+    const formattedGameOwners = formatOwners(game.owners);
+    const singleOwner = formattedGameOwners.length === 1 ? formattedGameOwners[0] : null;
     expListEl.innerHTML = `
       <div class="modal-expansions-label">Expansions</div>
       <div class="expansion-grid">
         ${knownExps.map(e => {
-          const ownerTag = e.owner ? `<span class="exp-owner">${e.owner}</span>` : "";
+          const ownerTag = (e.owner && e.owner !== singleOwner) ? `<span class="exp-owner">${e.owner}</span>` : "";
           return `
           <div class="expansion-item${e.owned ? " owned" : ""}">
             <span class="${e.owned ? "exp-owned" : "exp-unowned"}">${e.owned ? "✓" : "⊘"}</span>${fmtExpName(e.name)}${ownerTag}
