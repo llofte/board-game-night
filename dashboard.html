@@ -539,6 +539,42 @@
       letter-spacing: 0.08em;
     }
 
+    /* ── Notes section in game modal ── */
+    .modal-notes {
+      padding: 12px 24px 14px;
+      border-bottom: 1px solid var(--border);
+      background: var(--bg);
+    }
+    .modal-notes-label {
+      font-size: 0.9rem;
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+      color: var(--text-muted);
+      font-family: ui-monospace, 'SF Mono', 'Menlo', 'Courier New', monospace;
+      margin-bottom: 8px;
+    }
+    .modal-notes-content {
+      font-size: 0.9rem;
+      color: var(--text-muted);
+      line-height: 1.65;
+    }
+    .modal-notes-content ul {
+      list-style: none;
+      padding: 0;
+      margin: 0;
+    }
+    .modal-notes-content li {
+      padding-left: 14px;
+      position: relative;
+      margin-bottom: 3px;
+    }
+    .modal-notes-content li::before {
+      content: '–';
+      position: absolute;
+      left: 0;
+      color: var(--accent-dim);
+    }
+
     /* ── Expansion list in game modal ── */
     .modal-expansions {
       padding: 12px 24px 14px;
@@ -1093,6 +1129,7 @@
     <div class="modal-stats" id="modal-stats"></div>
     <div class="modal-owners" id="modal-owners"></div>
     <div class="modal-expansions" id="modal-expansions"></div>
+    <div class="modal-notes" id="modal-notes"></div>
     <div class="modal-body" id="modal-body"></div>
   </div>
 </div>
@@ -1279,6 +1316,11 @@
         <input type="url" class="form-input" id="ag-tutorial-url" placeholder="https://youtube.com/…" />
       </div>
 
+      <div class="form-section">
+        <label class="form-label">Notes <span style="color:var(--border-hi);font-size:0.85em">(optional — use - to separate bullet points)</span></label>
+        <textarea class="form-textarea" id="ag-notes" placeholder="e.g. - great with 4+ players - box stored at Peter's house"></textarea>
+      </div>
+
       <button class="log-submit-btn" id="ag-submit">Add Game</button>
       <div class="log-feedback" id="ag-feedback"></div>
     </div>
@@ -1362,6 +1404,7 @@ function parseGame(r) {
     rulesUrl:     f["Rules URL"]   || null,
     bggUrl:       f["BGG URL"]     || null,
     tutorialUrl:  f["Tutorial URL"]|| null,
+    notes:        f["Notes"]       || null,
     favorite:     f["Favorite"]    === true
   };
 }
@@ -1466,6 +1509,17 @@ function buildPodiumHTML(s) {
   if (s.places[0] === COOP_LOSS) return `<span style="color:var(--red)">Co-op loss</span>`;
   if (s.places[0] === DNF)       return `<span style="color:#8a9298">DNF</span>`;
   return s.places.slice(0, 3).map((name, i) => `<span>${MEDALS[i]} ${name}</span>`).join("");
+}
+
+// ── Renders game notes: dashes become bullets, else paragraph ─
+function renderNotes(notes) {
+  if (!notes) return '';
+  const hasDash = notes.trimStart().startsWith('-') || notes.includes(' - ');
+  if (hasDash) {
+    const items = notes.split(/(?:^|\s+)-\s+/).map(s => s.trim()).filter(Boolean);
+    return '<ul>' + items.map(s => `<li>${s}</li>`).join('') + '</ul>';
+  }
+  return `<p style="margin:0">${notes}</p>`;
 }
 
 // ── Renders expansion name with parentheticals in muted gray ──
@@ -1883,6 +1937,13 @@ function openGameModal(game) {
       </div>`;
   } else {
     expListEl.style.display = "none";
+  }
+  const notesEl = document.getElementById("modal-notes");
+  if (game.notes) {
+    notesEl.style.display = "";
+    notesEl.innerHTML = `<div class="modal-notes-label">Notes</div><div class="modal-notes-content">${renderNotes(game.notes)}</div>`;
+  } else {
+    notesEl.style.display = "none";
   }
   document.getElementById("modal-stats").innerHTML = `
     <div class="modal-stat"><div class="label">Times Played</div><div class="value">${totalPlays}</div></div>
@@ -2466,6 +2527,7 @@ function openAddGameModal(game = null) {
   document.getElementById('ag-bgg-url').value      = isEdit ? (game.bggUrl      || '') : '';
   document.getElementById('ag-rules-url').value    = isEdit ? (game.rulesUrl    || '') : '';
   document.getElementById('ag-tutorial-url').value = isEdit ? (game.tutorialUrl || '') : '';
+  document.getElementById('ag-notes').value        = isEdit ? (game.notes       || '') : '';
   document.getElementById('ag-feedback').textContent = '';
   document.getElementById('ag-owners').innerHTML =
     PLAYERS.map(p => `<button class="chip${isEdit && game.owners.includes(p) ? ' active' : ''}" data-owner="${p}">${p}</button>`).join('');
@@ -2485,6 +2547,7 @@ async function submitNewGame() {
   const bggUrl      = document.getElementById('ag-bgg-url').value.trim();
   const rulesUrl    = document.getElementById('ag-rules-url').value.trim();
   const tutorialUrl = document.getElementById('ag-tutorial-url').value.trim();
+  const notes       = document.getElementById('ag-notes').value.trim();
 
   if (!name)        { agFeedback('Please enter a game name.', 'err'); return; }
   if (!min || !max) { agFeedback('Please enter min and max players.', 'err'); return; }
@@ -2496,6 +2559,7 @@ async function submitNewGame() {
   if (bggUrl)       fields['BGG URL']       = bggUrl;
   if (rulesUrl)     fields['Rules URL']     = rulesUrl;
   if (tutorialUrl)  fields['Tutorial URL']  = tutorialUrl;
+  if (notes)        fields['Notes']         = notes;
 
   const isEdit = !!_agEditId;
   const btn = document.getElementById('ag-submit');
