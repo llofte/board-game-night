@@ -2079,7 +2079,13 @@ function openPlayerModal(name) {
   const gamePlays = {};
   sessions.forEach(s => { gamePlays[s.game] = (gamePlays[s.game] || 0) + 1; });
   teamSessions.forEach(ts => { gamePlays[ts.game] = (gamePlays[ts.game] || 0) + 1; });
-  const favGame  = Object.entries(gamePlays).sort((a, b) => b[1] - a[1])[0];
+  const sortedPlayerGames = Object.entries(gamePlays).sort((a, b) => b[1] - a[1]);
+  const maxPlayerPlays    = sortedPlayerGames[0]?.[1] ?? 0;
+  const topPlayerGames    = sortedPlayerGames.filter(([, n]) => n === maxPlayerPlays);
+  const favGameLabel      = topPlayerGames.length === 0 ? "—"
+    : topPlayerGames.length === 1 ? topPlayerGames[0][0]
+    : topPlayerGames.length === 2 ? `${topPlayerGames[0][0]} & ${topPlayerGames[1][0]}`
+    : `${topPlayerGames.length}-way tie`;
   const rank     = _leaderboard.findIndex(p => p.name === name) + 1;
   const rankLabel = MEDALS[rank - 1] ?? `#${rank}`;
   document.getElementById("player-modal-name").textContent = name;
@@ -2091,7 +2097,7 @@ function openPlayerModal(name) {
     <div class="modal-stat"><div class="label">Rank</div><div class="value">${rankLabel}</div></div>
     <div class="modal-stat"><div class="label">Sessions</div><div class="value">${ps.sessions}</div></div>
     <div class="modal-stat"><div class="label">Points</div><div class="value">${ps.pts}</div></div>
-    <div class="modal-stat"><div class="label">Most Played</div><div class="value" style="font-size:0.9rem;padding-top:4px;line-height:1.3">${favGame ? favGame[0] : "—"}</div></div>`;
+    <div class="modal-stat"><div class="label">Most Played</div><div class="value" style="font-size:0.9rem;padding-top:4px;line-height:1.3">${favGameLabel}</div></div>`;
   const body = document.getElementById("player-modal-body");
   const allPlayerSessions = [
     ...sessions.map(s => ({ ...s, _type: 'regular' })),
