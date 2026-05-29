@@ -1749,7 +1749,12 @@ function renderDashboard(gamesLibrary, playLog, expansions, teamSessions) {
 
   const sortedGames  = Object.entries(_gameCounts).sort((a, b) => b[1] - a[1]);
   const totalSessions = playLog.length + _teamSessions.length;
-  const mostPlayed   = sortedGames[0]?.[0] ?? "—";
+  const maxPlays     = sortedGames[0]?.[1] ?? 0;
+  const topGames     = sortedGames.filter(([, n]) => n === maxPlays);
+  const mostPlayed   = topGames.length === 0 ? "—"
+                     : topGames.length === 1 ? topGames[0][0]
+                     : topGames.length === 2 ? `${topGames[0][0]} & ${topGames[1][0]}`
+                     : `${topGames.length}-way tie`;
   const champion     = _leaderboard[0];
 
   // Stat cards
@@ -1758,7 +1763,7 @@ function renderDashboard(gamesLibrary, playLog, expansions, teamSessions) {
   [
     { label: "Total<br>Sessions",   value: totalSessions,         sub: "game nights" },
     { label: "Games in<br>Library", value: gamesLibrary.length,   sub: "titles" },
-    { label: "Most<br>Played",      value: mostPlayed,            sub: sortedGames[0] ? `${sortedGames[0][1]}× played` : "" },
+    { label: "Most<br>Played",      value: mostPlayed,            sub: maxPlays > 0 ? `${maxPlays}× played` : "" },
     { label: "Current<br>Champion", value: champion?.name ?? "—", sub: champion ? `${champion.pts} pts` : "" },
   ].forEach(s => {
     statGrid.innerHTML += `
