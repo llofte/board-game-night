@@ -2537,13 +2537,21 @@ document.getElementById("session-list").addEventListener("click", e => {
 });
 
 // ── Tab switching ─────────────────────────────────────────────
+function switchTab(tabName) {
+  document.querySelectorAll(".tab").forEach(t => t.classList.remove("active"));
+  document.querySelectorAll(".tab-panel").forEach(p => p.classList.remove("active"));
+  const tab = document.querySelector(`.tab[data-tab="${tabName}"]`);
+  if (tab) tab.classList.add("active");
+  const panel = document.getElementById("tab-" + tabName);
+  if (panel) panel.classList.add("active");
+  localStorage.setItem("bgn_active_tab", tabName);
+}
+// Restore last active tab on load
+const savedTab = localStorage.getItem("bgn_active_tab");
+if (savedTab) switchTab(savedTab);
+
 document.querySelectorAll(".tab").forEach(tab => {
-  tab.addEventListener("click", () => {
-    document.querySelectorAll(".tab").forEach(t => t.classList.remove("active"));
-    document.querySelectorAll(".tab-panel").forEach(p => p.classList.remove("active"));
-    tab.classList.add("active");
-    document.getElementById("tab-" + tab.dataset.tab).classList.add("active");
-  });
+  tab.addEventListener("click", () => switchTab(tab.dataset.tab));
 });
 
 // ── Filter buttons (event delegation — buttons are dynamic) ──
