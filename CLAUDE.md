@@ -94,3 +94,18 @@ When asked, Claude:
 - All dashboard features must work on both platforms
 - Always consider Android Chrome AND iPhone Safari when making UI/interaction changes
 - User (Leanna) is the only one who saves to home screen — general group accesses via mobile browser
+
+## Adding a game
+When adding any game, always populate: Game Name, Min/Max Players, Genre, BGG URL, Owners (if known), Rules URL (if PDF in rules/ folder), Tutorial URL (if provided). Expansion Min/Max only if an owned expansion changes player count.
+Also look up known expansions and add them to the Expansions table (Owned: false by default).
+
+## Marking an expansion as owned
+1. Check if that expansion changes the player count
+2. If yes — update Expansion Min / Expansion Max on the Games Library record
+3. If no — leave those fields alone (or clear them if incorrectly set)
+
+## Header icon
+🎲 in the header is a placeholder. User wants to revisit — SVG meeple is the top candidate, chess pawn ♟️ and gear ⚙️ were also discussed. Pick up from SVG meeple as the recommended path when user raises it.
+
+## Preview panel
+The PostToolUse:Write hook auto-shows HTML files in the preview panel. Never set up a Python server or use preview_start — just Write the file and the panel updates automatically.
