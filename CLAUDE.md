@@ -88,3 +88,9 @@ When asked, Claude:
 - User only runs: `git push` commands when Claude provides the full terminal command
 - Dashboard auto-sorts games alphabetically on load (Airtable query sorts by Game Name)
 - Owner display: "Dave, Leanna" → shown as "Loftes" on dashboard
+
+## Platform priorities
+- ~half the group uses Android (Chrome), ~half uses iPhone (Safari)
+- All dashboard features must work on both platforms
+- Always consider Android Chrome AND iPhone Safari when making UI/interaction changes
+- User (Leanna) is the only one who saves to home screen — general group accesses via mobile browser
