@@ -41,17 +41,18 @@ Date | Game | Team 1 (comma-separated) | Team 2 (comma-separated) | T1 Score | T
 ## How Claude makes changes
 Claude owns ALL Airtable changes — records AND schema. The user never touches Airtable.
 
-### Record operations (via Python scripts or at.py)
-- **Read**: GET `{base_url}/{table}?pageSize=100&...`
-- **Write**: POST `{base_url}/{table}` with `{ records: [{ fields: {...} }] }`
-- **Update**: PATCH `{base_url}/{table}/{recordId}` with `{ fields: {...} }`
-- **Delete**: DELETE `{base_url}/{table}/{recordId}`
+### Primary method: Airtable MCP (preferred)
+An Airtable MCP connector is configured in this Claude Code environment. Use it directly for all reads, writes, updates, deletes, and schema changes. No scripts needed.
 
-### Schema operations (adding/modifying fields)
-- **Add field**: POST `https://api.airtable.com/v0/meta/bases/{baseId}/tables/{tableId}/fields`
-  Body: `{ "name": "Field Name", "type": "multilineText" | "singleLineText" | "number" | "checkbox" | "url" | ... }`
-- Token has `schema.bases:write` permission — use it whenever a new field is needed.
-- Always update CLAUDE.md field lists after adding a field.
+### Fallback: REST API via at.py
+If MCP is unavailable, use `at.py` in the project folder:
+- **Read**: `python3 at.py get "Table" [--filter formula] [--fields f1,f2]`
+- **Write**: `python3 at.py post "Table" '{"Field": "value"}'`
+- **Update**: `python3 at.py patch "Table" recXXX '{"Field": "value"}'`
+- **Delete**: `python3 at.py delete "Table" recXXX`
+- **Schema**: POST to `https://api.airtable.com/v0/meta/bases/{baseId}/tables/{tableId}/fields`
+
+Always update CLAUDE.md field lists after adding a field.
 
 No Apps Script. No paste-and-deploy. Claude just does it.
 
