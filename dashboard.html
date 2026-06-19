@@ -1085,9 +1085,10 @@
           <thead>
             <tr>
               <th>Player</th>
-              <th style="width:70px">Sessions</th>
-              <th style="width:60px">Pts</th>
-              <th style="width:50px">1st</th>
+              <th style="width:40px">👤</th>
+              <th style="width:50px">Pts</th>
+              <th style="width:40px">1st</th>
+              <th style="width:50px">APS</th>
             </tr>
           </thead>
           <tbody id="leaderboard-body"></tbody>
@@ -1788,6 +1789,7 @@ function renderDashboard(gamesLibrary, playLog, expansions, teamSessions) {
         <td style="text-align:right">${p.sessions}</td>
         <td class="pts-col">${p.pts}</td>
         <td class="firsts-col">${p.firsts}</td>
+        <td style="text-align:right;color:var(--text-muted)">${p.sessions > 0 ? (p.pts / p.sessions).toFixed(1) : "—"}</td>
       </tr>`;
   });
 
