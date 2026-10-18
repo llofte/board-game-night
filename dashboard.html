@@ -1717,12 +1717,14 @@ function renderDashboard(gamesLibrary, playLog, expansions, teamSessions) {
     });
     // Podium bonus points (competitive games only)
     if (session.places[0] !== COOP_WIN && session.places[0] !== COOP_LOSS && session.places[0] !== DNF) {
-      session.places.forEach((p, i) => {
-        if (!_playerStats[p]) return;
-        _playerStats[p].pts += PLACE_PTS[i] ?? 0;
-        if (i === 0) _playerStats[p].firsts++;
-        if (i === 1) _playerStats[p].seconds++;
-        if (i === 2) _playerStats[p].thirds++;
+      session.places.forEach((place, i) => {
+        place.split(',').map(s => s.trim()).forEach(p => {
+          if (!_playerStats[p]) return;
+          _playerStats[p].pts += PLACE_PTS[i] ?? 0;
+          if (i === 0) _playerStats[p].firsts++;
+          if (i === 1) _playerStats[p].seconds++;
+          if (i === 2) _playerStats[p].thirds++;
+        });
       });
     }
   });
